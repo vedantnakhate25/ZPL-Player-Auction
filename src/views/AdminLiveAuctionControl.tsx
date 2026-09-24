@@ -232,6 +232,12 @@ export function AdminLiveAuctionControl({
   // Update live bid
   const handleUpdateBid = async (newPoints: number, teamId: string) => {
     if (!auctionState || !auctionState.currentPlayerId) return;
+
+    if (auctionState.status === 'paused') {
+      setActionError('Auction is currently PAUSED! You must RESUME the auction before placing or updating bids.');
+      return;
+    }
+
     setBidPoints(newPoints);
     setSelectedTeamId(teamId);
 
@@ -256,6 +262,11 @@ export function AdminLiveAuctionControl({
   const handleMarkSold = async () => {
     if (!currentPlayer || !auctionState) return;
     setActionError(null);
+
+    if (auctionState.status === 'paused') {
+      setActionError('Auction is currently PAUSED! Please RESUME the auction first before marking player as SOLD.');
+      return;
+    }
 
     if (!selectedTeamId) {
       setActionError('Please select the winning team before marking player as SOLD.');
@@ -330,6 +341,12 @@ export function AdminLiveAuctionControl({
   // Handle Mark UNSOLD
   const handleMarkUnsold = async () => {
     if (!currentPlayer || !auctionState) return;
+
+    if (auctionState.status === 'paused') {
+      setActionError('Auction is currently PAUSED! Please RESUME the auction first.');
+      return;
+    }
+
     setSubmitting(true);
     setActionError(null);
 
@@ -369,6 +386,11 @@ export function AdminLiveAuctionControl({
 
   // Next Player
   const handleNextPlayer = async () => {
+    if (auctionState?.status === 'paused') {
+      setActionError('Auction is currently PAUSED! Please RESUME the auction first before advancing to next player.');
+      return;
+    }
+
     setSubmitting(true);
     setActionError(null);
 
@@ -855,31 +877,86 @@ export function AdminLiveAuctionControl({
 
               {/* BIDDING CONTROL BOX */}
               <div className="p-5 rounded-2xl bg-black border border-zinc-800 space-y-5">
-                <h4 className="text-sm font-black uppercase tracking-wider text-amber-400 flex items-center gap-2">
-                  <Coins className="w-4 h-4 text-amber-400" />
-                  Live Bid Controller
-                </h4>
+                <div className="flex items-center justify-between">
+                  <h4 className="text-sm font-black uppercase tracking-wider text-amber-400 flex items-center gap-2">
+                    <Coins className="w-4 h-4 text-amber-400" />
+                    Live Bid Controller
+                  </h4>
+                  {auctionState.status === 'paused' && (
+                    <span className="px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/50 text-[10px] font-black uppercase tracking-wider animate-pulse flex items-center gap-1">
+                      <Pause className="w-3 h-3 fill-current" />
+                      PAUSED
+                    </span>
+                  )}
+                </div>
+
+                {/* AUCTION PAUSED ALERT BANNER WITH INSTANT RESUME BUTTON */}
+                {auctionState.status === 'paused' && (
+                  <div className="p-4 rounded-2xl bg-amber-500/15 border-2 border-amber-500/80 flex flex-col sm:flex-row items-center justify-between gap-3 text-center sm:text-left shadow-lg shadow-amber-500/10">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-2xl bg-amber-400 text-black flex items-center justify-center shrink-0 shadow-md">
+                        <Pause className="w-5 h-5 fill-current" />
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2 justify-center sm:justify-start">
+                          <span className="text-sm font-black text-amber-300 uppercase tracking-wide">
+                            Auction is Currently Paused
+                          </span>
+                        </div>
+                        <p className="text-xs text-zinc-300 font-medium mt-0.5">
+                          Bids cannot be placed while the auction is paused. First click <strong>Resume Auction</strong>, then place the bid.
+                        </p>
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={handleTogglePause}
+                      className="min-h-[44px] px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-400 hover:from-emerald-400 hover:to-emerald-300 active:scale-95 text-black font-black text-xs sm:text-sm uppercase tracking-wider flex items-center gap-2 shadow-lg shadow-emerald-500/20 transition-all cursor-pointer shrink-0"
+                    >
+                      <Play className="w-4 h-4 fill-current" />
+                      <span>Resume Auction</span>
+                    </button>
+                  </div>
+                )}
 
                 {/* SELECT TEAM */}
                 <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-zinc-400 mb-2">
-                    Winning / Highest Bidder Team:
-                  </label>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                  <div className="flex items-center justify-between mb-2">
+                    <label className="text-xs font-bold uppercase tracking-wider text-zinc-400">
+                      Winning / Highest Bidder Team:
+                    </label>
+                    {auctionState.status === 'paused' && (
+                      <span className="text-[11px] font-bold text-amber-400">
+                        Resume auction to select team
+                      </span>
+                    )}
+                  </div>
+                  <div className={`grid grid-cols-1 sm:grid-cols-2 gap-2.5 ${auctionState.status === 'paused' ? 'opacity-60' : ''}`}>
                     {teams.map((t) => {
                       const isSelected = t.id === selectedTeamId;
                       const hasEnoughPurse = t.remainingPurse >= bidPoints;
+                      const isPaused = auctionState.status === 'paused';
 
                       return (
                         <button
                           key={t.id}
                           type="button"
-                          onClick={() => handleUpdateBid(bidPoints, t.id)}
-                          className={`flex items-center gap-3 p-3 rounded-2xl border text-left transition-all cursor-pointer ${
-                            isSelected
-                              ? 'bg-amber-400 text-black border-amber-400 ring-2 ring-amber-400/50 shadow-md font-bold'
+                          onClick={() => {
+                            if (isPaused) {
+                              setActionError('Auction is currently PAUSED! Please click RESUME AUCTION first before placing bids.');
+                              return;
+                            }
+                            handleUpdateBid(bidPoints, t.id);
+                          }}
+                          disabled={isPaused || !hasEnoughPurse}
+                          className={`flex items-center gap-3 p-3 rounded-2xl border text-left transition-all ${
+                            isPaused
+                              ? 'cursor-not-allowed bg-zinc-950/60 border-zinc-800 text-zinc-400'
+                              : isSelected
+                              ? 'bg-amber-400 text-black border-amber-400 ring-2 ring-amber-400/50 shadow-md font-bold cursor-pointer'
                               : hasEnoughPurse
-                              ? 'bg-zinc-950 border-zinc-800 hover:border-amber-400/40 text-white'
+                              ? 'bg-zinc-950 border-zinc-800 hover:border-amber-400/40 text-white cursor-pointer'
                               : 'bg-zinc-950/40 border-zinc-800/40 opacity-40 cursor-not-allowed text-zinc-500'
                           }`}
                         >
@@ -889,12 +966,14 @@ export function AdminLiveAuctionControl({
                             className="w-8 h-8 rounded-full object-cover border border-amber-500/30 bg-black shrink-0"
                           />
                           <div className="flex-1 min-w-0">
-                            <p className={`text-xs sm:text-sm font-black truncate ${isSelected ? 'text-black' : 'text-white'}`}>
+                            <p className={`text-xs sm:text-sm font-black truncate ${!isPaused && isSelected ? 'text-black' : 'text-white'}`}>
                               {t.name}
                             </p>
                             <p
                               className={`text-xs font-bold ${
-                                isSelected
+                                isPaused
+                                  ? 'text-zinc-500'
+                                  : isSelected
                                   ? 'text-black/80'
                                   : hasEnoughPurse
                                   ? 'text-emerald-400'
@@ -911,7 +990,7 @@ export function AdminLiveAuctionControl({
                 </div>
 
                 {/* BID POINTS ADJUSTER */}
-                <div>
+                <div className={auctionState.status === 'paused' ? 'opacity-60' : ''}>
                   <div className="flex items-center justify-between mb-2">
                     <label className="text-xs font-bold uppercase tracking-wider text-zinc-400">
                       Bid / Sold Points:
@@ -928,16 +1007,21 @@ export function AdminLiveAuctionControl({
                   <div className="flex items-center gap-2 sm:gap-3">
                     <button
                       type="button"
-                      onClick={() =>
+                      disabled={auctionState.status === 'paused'}
+                      onClick={() => {
+                        if (auctionState.status === 'paused') {
+                          setActionError('Auction is currently PAUSED! Please click RESUME AUCTION first.');
+                          return;
+                        }
                         handleUpdateBid(
                           Math.max(
                             currentPlayer?.basePoints || 5,
                             bidPoints - 5
                           ),
                           selectedTeamId
-                        )
-                      }
-                      className="min-h-[48px] min-w-[48px] sm:min-h-[52px] sm:min-w-[52px] rounded-2xl bg-zinc-900 hover:bg-zinc-800 active:scale-95 border border-zinc-700 font-black text-amber-400 text-lg flex items-center justify-center transition-all cursor-pointer shadow-md"
+                        );
+                      }}
+                      className="min-h-[48px] min-w-[48px] sm:min-h-[52px] sm:min-w-[52px] rounded-2xl bg-zinc-900 hover:bg-zinc-800 active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed border border-zinc-700 font-black text-amber-400 text-lg flex items-center justify-center transition-all cursor-pointer shadow-md"
                       title="Step down 5"
                     >
                       -5
@@ -946,12 +1030,17 @@ export function AdminLiveAuctionControl({
                     <div className="relative flex-1">
                       <input
                         type="number"
+                        disabled={auctionState.status === 'paused'}
                         value={bidPoints}
-                        onChange={(e) =>
-                          handleUpdateBid(Number(e.target.value), selectedTeamId)
-                        }
+                        onChange={(e) => {
+                          if (auctionState.status === 'paused') {
+                            setActionError('Auction is currently PAUSED! Please click RESUME AUCTION first.');
+                            return;
+                          }
+                          handleUpdateBid(Number(e.target.value), selectedTeamId);
+                        }}
                         min={currentPlayer?.basePoints || 0}
-                        className="w-full min-h-[48px] sm:min-h-[52px] px-4 rounded-2xl bg-zinc-950 border-2 border-amber-400 text-amber-400 font-black text-2xl sm:text-3xl text-center focus:outline-none focus:ring-2 focus:ring-amber-400/30 shadow-inner"
+                        className="w-full min-h-[48px] sm:min-h-[52px] px-4 rounded-2xl bg-zinc-950 border-2 border-amber-400 disabled:border-zinc-700 disabled:text-zinc-500 disabled:cursor-not-allowed text-amber-400 font-black text-2xl sm:text-3xl text-center focus:outline-none focus:ring-2 focus:ring-amber-400/30 shadow-inner"
                       />
                       <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs font-black text-zinc-500 pointer-events-none hidden sm:inline">
                         PTS
@@ -960,10 +1049,15 @@ export function AdminLiveAuctionControl({
 
                     <button
                       type="button"
-                      onClick={() =>
-                        handleUpdateBid(bidPoints + 5, selectedTeamId)
-                      }
-                      className="min-h-[48px] min-w-[48px] sm:min-h-[52px] sm:min-w-[52px] rounded-2xl bg-zinc-900 hover:bg-zinc-800 active:scale-95 border border-zinc-700 font-black text-amber-400 text-lg flex items-center justify-center transition-all cursor-pointer shadow-md"
+                      disabled={auctionState.status === 'paused'}
+                      onClick={() => {
+                        if (auctionState.status === 'paused') {
+                          setActionError('Auction is currently PAUSED! Please click RESUME AUCTION first.');
+                          return;
+                        }
+                        handleUpdateBid(bidPoints + 5, selectedTeamId);
+                      }}
+                      className="min-h-[48px] min-w-[48px] sm:min-h-[52px] sm:min-w-[52px] rounded-2xl bg-zinc-900 hover:bg-zinc-800 active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed border border-zinc-700 font-black text-amber-400 text-lg flex items-center justify-center transition-all cursor-pointer shadow-md"
                       title="Step up 5"
                     >
                       +5
@@ -971,7 +1065,7 @@ export function AdminLiveAuctionControl({
                   </div>
 
                   {/* Fast Tap Increment Chips Bar */}
-                  <div>
+                  <div className="mt-3">
                     <span className="text-[11px] font-bold text-zinc-400 block mb-1.5 uppercase tracking-wide">
                       Quick Tap Increments:
                     </span>
@@ -988,22 +1082,63 @@ export function AdminLiveAuctionControl({
                         <button
                           key={item.label}
                           type="button"
-                          onClick={() =>
+                          disabled={auctionState.status === 'paused'}
+                          onClick={() => {
+                            if (auctionState.status === 'paused') {
+                              setActionError('Auction is currently PAUSED! Please click RESUME AUCTION first.');
+                              return;
+                            }
                             handleUpdateBid(
                               Math.max(
                                 currentPlayer?.basePoints || 0,
                                 bidPoints + item.val
                               ),
                               selectedTeamId
-                            )
-                          }
-                          className="min-h-[44px] rounded-xl bg-zinc-900 hover:bg-gradient-to-r hover:from-amber-400 hover:to-amber-500 hover:text-black active:scale-95 border border-zinc-700 font-black text-xs sm:text-sm text-zinc-200 transition-all shadow-sm flex items-center justify-center cursor-pointer"
+                            );
+                          }}
+                          className="min-h-[44px] rounded-xl bg-zinc-900 hover:bg-gradient-to-r hover:from-amber-400 hover:to-amber-500 hover:text-black active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed border border-zinc-700 font-black text-xs sm:text-sm text-zinc-200 transition-all shadow-sm flex items-center justify-center cursor-pointer"
                         >
                           {item.label}
                         </button>
                       ))}
                     </div>
                   </div>
+                </div>
+
+                {/* EXPLICIT PLACE / RESUME BID BUTTON */}
+                <div className="pt-2 border-t border-zinc-800">
+                  {auctionState.status === 'paused' ? (
+                    <button
+                      type="button"
+                      onClick={handleTogglePause}
+                      className="w-full min-h-[50px] py-3.5 px-4 rounded-2xl bg-gradient-to-r from-emerald-500 to-emerald-400 hover:from-emerald-400 hover:to-emerald-300 active:scale-[0.98] text-black font-black text-sm uppercase tracking-wider flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/20 transition-all cursor-pointer"
+                    >
+                      <Play className="w-5 h-5 fill-current" />
+                      <span>Auction Paused — Click Here to Resume &amp; Place Bid</span>
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (!selectedTeamId) {
+                          setActionError('Please select a team from the list above to place the bid.');
+                          return;
+                        }
+                        handleUpdateBid(bidPoints, selectedTeamId);
+                        setActionSuccess(`Bid placed: ${bidPoints} PTS for ${selectedWinningTeam?.name || 'Selected Team'}`);
+                        setTimeout(() => setActionSuccess(null), 3000);
+                      }}
+                      disabled={!selectedTeamId}
+                      className="w-full min-h-[50px] py-3.5 px-4 rounded-2xl bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 disabled:opacity-40 disabled:cursor-not-allowed text-black font-black text-sm uppercase tracking-wider flex items-center justify-center gap-2 shadow-lg shadow-amber-500/20 transition-all cursor-pointer active:scale-98"
+                    >
+                      <Coins className="w-5 h-5" />
+                      <span>
+                        {selectedWinningTeam
+                          ? `Place Bid: ${bidPoints} PTS for ${selectedWinningTeam.name}`
+                          : 'Select Team Above to Place Bid'}
+                      </span>
+                    </button>
+                  )}
                 </div>
               </div>
 
@@ -1012,8 +1147,9 @@ export function AdminLiveAuctionControl({
                 <button
                   type="button"
                   onClick={handleMarkSold}
-                  disabled={submitting || auctionState.playerStatus === 'sold'}
-                  className="min-h-[52px] py-3.5 px-4 rounded-2xl bg-emerald-600 hover:bg-emerald-500 active:scale-[0.98] text-white font-black text-base flex items-center justify-center gap-2 shadow-lg shadow-emerald-950/60 transition-all disabled:opacity-40 cursor-pointer"
+                  disabled={submitting || auctionState.status === 'paused' || auctionState.playerStatus === 'sold'}
+                  className="min-h-[52px] py-3.5 px-4 rounded-2xl bg-emerald-600 hover:bg-emerald-500 active:scale-[0.98] text-white font-black text-base flex items-center justify-center gap-2 shadow-lg shadow-emerald-950/60 transition-all disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+                  title={auctionState.status === 'paused' ? 'Auction is paused. Resume to sell player.' : undefined}
                 >
                   <Check className="w-5 h-5 stroke-[3]" />
                   <span>MARK SOLD</span>
@@ -1022,8 +1158,9 @@ export function AdminLiveAuctionControl({
                 <button
                   type="button"
                   onClick={handleMarkUnsold}
-                  disabled={submitting || auctionState.playerStatus === 'unsold'}
-                  className="min-h-[52px] py-3.5 px-4 rounded-2xl bg-rose-600 hover:bg-rose-500 active:scale-[0.98] text-white font-black text-base flex items-center justify-center gap-2 shadow-lg shadow-rose-950/60 transition-all disabled:opacity-40 cursor-pointer"
+                  disabled={submitting || auctionState.status === 'paused' || auctionState.playerStatus === 'unsold'}
+                  className="min-h-[52px] py-3.5 px-4 rounded-2xl bg-rose-600 hover:bg-rose-500 active:scale-[0.98] text-white font-black text-base flex items-center justify-center gap-2 shadow-lg shadow-rose-950/60 transition-all disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+                  title={auctionState.status === 'paused' ? 'Auction is paused. Resume first.' : undefined}
                 >
                   <X className="w-5 h-5 stroke-[3]" />
                   <span>MARK UNSOLD</span>
@@ -1032,8 +1169,9 @@ export function AdminLiveAuctionControl({
                 <button
                   type="button"
                   onClick={handleNextPlayer}
-                  disabled={submitting}
-                  className="min-h-[52px] py-3.5 px-4 rounded-2xl bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 active:scale-[0.98] text-black font-black text-base flex items-center justify-center gap-2 shadow-lg shadow-amber-500/20 transition-all disabled:opacity-40 cursor-pointer"
+                  disabled={submitting || auctionState.status === 'paused'}
+                  className="min-h-[52px] py-3.5 px-4 rounded-2xl bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 active:scale-[0.98] text-black font-black text-base flex items-center justify-center gap-2 shadow-lg shadow-amber-500/20 transition-all disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+                  title={auctionState.status === 'paused' ? 'Auction is paused. Resume first.' : undefined}
                 >
                   <span>NEXT PLAYER</span>
                   <SkipForward className="w-5 h-5 fill-current" />

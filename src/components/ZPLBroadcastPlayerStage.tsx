@@ -223,7 +223,12 @@ export function ZPLBroadcastPlayerStage({
 
               {/* Status pill */}
               <div className="flex items-center gap-1">
-                {isSold ? (
+                {auctionState.status === 'paused' ? (
+                  <span className="px-2.5 py-0.5 rounded-full bg-amber-400 text-black text-[10px] font-black uppercase tracking-wider animate-pulse flex items-center gap-1 shadow-sm">
+                    <span className="w-1.5 h-1.5 rounded-full bg-black" />
+                    PAUSED
+                  </span>
+                ) : isSold ? (
                   <span className="px-2 py-0.5 rounded-full bg-emerald-500 text-black text-[10px] font-black uppercase tracking-wider animate-pulse">
                     SOLD
                   </span>
@@ -601,7 +606,16 @@ export function ZPLBroadcastPlayerStage({
       <div className="relative px-3 sm:px-6 py-2 pb-3 w-full max-w-3xl mx-auto">
         <div className="rounded-full bg-white/95 text-black px-3.5 py-1.5 border border-zinc-300 shadow-xl flex items-center justify-center text-center">
           <p className="text-[11px] sm:text-xs font-bold text-zinc-900 leading-snug flex items-center justify-center flex-wrap gap-1.5">
-            {isSold ? (
+            {auctionState.status === 'paused' ? (
+              <>
+                <span className="px-2 py-0.5 rounded-full bg-amber-500 text-black font-black text-[9px] uppercase tracking-wider shadow-xs animate-pulse">
+                  AUCTION PAUSED
+                </span>
+                <span>
+                  The auction is currently on pause by the admin. Bidding will resume shortly.
+                </span>
+              </>
+            ) : isSold ? (
               <>
                 <span className="px-2 py-0.5 rounded-full bg-emerald-600 text-white font-black text-[9px] uppercase tracking-wider shadow-xs">
                   OFFICIAL NOTICE
