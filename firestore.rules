@@ -1,0 +1,69 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() > 0 && id.size() <= 128;
+    }
+
+    // Default deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Test connection probe
+    match /test/{testId} {
+      allow read, write: if true;
+    }
+
+    // Auctions: Publicly readable for live viewers, manageable by admins
+    match /auctions/{auctionId} {
+      allow get: if isValidId(auctionId);
+      allow list: if true;
+      allow create, update, delete: if isValidId(auctionId);
+
+      // Subcollection for live viewer presence heartbeats
+      match /viewers/{viewerId} {
+        allow read, write: if isValidId(auctionId) && isValidId(viewerId);
+      }
+    }
+
+    // Teams: Publicly readable so viewer screen shows live purses and team names
+    match /teams/{teamId} {
+      allow get: if isValidId(teamId);
+      allow list: if true;
+      allow create, update, delete: if isValidId(teamId);
+    }
+
+    // Players: Publicly readable for live cards and rosters
+    match /players/{playerId} {
+      allow get: if isValidId(playerId);
+      allow list: if true;
+      allow create, update, delete: if isValidId(playerId);
+    }
+
+    // AuctionPlayers: Mapping / bid history
+    match /auctionPlayers/{auctionPlayerId} {
+      allow get: if isValidId(auctionPlayerId);
+      allow list: if true;
+      allow create, update, delete: if isValidId(auctionPlayerId);
+    }
+
+    // AuctionState: Real-time broadcast sync for live viewer and projector screens
+    match /auctionState/{auctionId} {
+      allow get: if isValidId(auctionId);
+      allow list: if true;
+      allow create, update, delete: if isValidId(auctionId);
+    }
+
+    // Admins list
+    match /admins/{adminUid} {
+      allow read: if true;
+      allow write: if isValidId(adminUid);
+    }
+  }
+}

@@ -1,0 +1,149 @@
+{
+  "entities": {
+    "Auction": {
+      "title": "Auction",
+      "description": "A cricket player auction event",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "date": { "type": "string" },
+        "time": { "type": "string" },
+        "status": { "type": "string", "enum": ["draft", "scheduled", "live", "paused", "completed"] },
+        "adminUid": { "type": "string" },
+        "adminEmail": { "type": "string" },
+        "preAuctionPhotos": { "type": "array", "description": "Continuous showcase photos rotating before auction starts" },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["name", "status", "adminUid"]
+    },
+    "Team": {
+      "title": "Team",
+      "description": "A participating cricket team in an auction",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "auctionId": { "type": "string" },
+        "name": { "type": "string" },
+        "logoUrl": { "type": "string" },
+        "purse": { "type": "number" },
+        "remainingPurse": { "type": "number" },
+        "totalSpent": { "type": "number" },
+        "purchasedPlayerCount": { "type": "number" },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["auctionId", "name", "purse", "remainingPurse"]
+    },
+    "Player": {
+      "title": "Player",
+      "description": "A cricket player registered for auction",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "auctionId": { "type": "string" },
+        "name": { "type": "string" },
+        "role": { "type": "string", "enum": ["Batsman", "Bowler", "All-Rounder", "Wicket-Keeper"] },
+        "photoUrl": { "type": "string" },
+        "basePoints": { "type": "number" },
+        "status": { "type": "string", "enum": ["upcoming", "current", "sold", "unsold"] },
+        "soldPoints": { "type": "number" },
+        "soldToTeamId": { "type": "string" },
+        "soldToTeamName": { "type": "string" },
+        "soldToTeamLogo": { "type": "string" },
+        "order": { "type": "number" },
+        "round": { "type": "string", "enum": ["regular", "unsold"] },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["auctionId", "name", "role", "basePoints", "status"]
+    },
+    "AuctionPlayer": {
+      "title": "AuctionPlayer",
+      "description": "Mapping or specific bid record for auction player",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "auctionId": { "type": "string" },
+        "playerId": { "type": "string" },
+        "status": { "type": "string" },
+        "soldPoints": { "type": "number" },
+        "winningTeamId": { "type": "string" }
+      },
+      "required": ["auctionId", "playerId"]
+    },
+    "AuctionState": {
+      "title": "AuctionState",
+      "description": "Real-time state for the live auction screen",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "auctionId": { "type": "string" },
+        "auctionName": { "type": "string" },
+        "status": { "type": "string", "enum": ["scheduled", "live", "paused", "completed"] },
+        "round": { "type": "string", "enum": ["regular", "unsold"] },
+        "currentPlayerId": { "type": "string" },
+        "currentPlayerName": { "type": "string" },
+        "currentPlayerRole": { "type": "string" },
+        "currentPlayerPhoto": { "type": "string" },
+        "currentPlayerBasePoints": { "type": "number" },
+        "playerStatus": { "type": "string", "enum": ["idle", "bidding", "sold", "unsold"] },
+        "currentBidPoints": { "type": "number" },
+        "winningTeamId": { "type": "string" },
+        "winningTeamName": { "type": "string" },
+        "winningTeamLogo": { "type": "string" },
+        "winningTeamRemainingPurse": { "type": "number" },
+        "lastSoldPlayerName": { "type": "string" },
+        "lastSoldPlayerPhoto": { "type": "string" },
+        "lastSoldPoints": { "type": "number" },
+        "lastSoldTeamName": { "type": "string" },
+        "lastSoldTeamLogo": { "type": "string" },
+        "lastUnsoldPlayerName": { "type": "string" },
+        "lastUnsoldPlayerPhoto": { "type": "string" },
+        "lastUnsoldPlayerRole": { "type": "string" },
+        "lastUnsoldBasePoints": { "type": "number" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["auctionId", "status", "round", "playerStatus"]
+    },
+    "Admin": {
+      "title": "Admin",
+      "description": "Admin record for authorized managers",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "email": { "type": "string" },
+        "role": { "type": "string" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["uid", "email"]
+    }
+  },
+  "firestore": {
+    "/auctions/{auctionId}": {
+      "schema": "Auction",
+      "description": "Cricket auction records"
+    },
+    "/teams/{teamId}": {
+      "schema": "Team",
+      "description": "Auction teams and remaining purse"
+    },
+    "/players/{playerId}": {
+      "schema": "Player",
+      "description": "Auction player roster"
+    },
+    "/auctionPlayers/{auctionPlayerId}": {
+      "schema": "AuctionPlayer",
+      "description": "Auction player association records"
+    },
+    "/auctionState/{auctionId}": {
+      "schema": "AuctionState",
+      "description": "Live auction broadcast real-time state"
+    },
+    "/admins/{adminUid}": {
+      "schema": "Admin",
+      "description": "Authorized administrators"
+    }
+  }
+}

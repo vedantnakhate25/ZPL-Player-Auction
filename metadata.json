@@ -1,0 +1,6 @@
+{
+  "name": "ZHEP KRIDA MANDAL (PLAYER AUCTION)",
+  "description": "Official live cricket player auction portal for ZHEP KRIDA MANDAL with real-time bidding, projector view, and team purse tracking.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

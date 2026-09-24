@@ -1,0 +1,238 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 600" width="100%" height="100%">
+  <!-- Pure White Background -->
+  <rect width="600" height="600" fill="#ffffff" />
+
+  <defs>
+    <!-- Rich Ribbon Gradients & Shadows -->
+    <linearGradient id="zhepRibbonGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#b51219" />
+      <stop offset="30%" stop-color="#d61b23" />
+      <stop offset="70%" stop-color="#d61b23" />
+      <stop offset="100%" stop-color="#9e0e14" />
+    </linearGradient>
+    <linearGradient id="zhepRibbonFold" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#6e080d" />
+      <stop offset="100%" stop-color="#4a0408" />
+    </linearGradient>
+    <filter id="ribbonGlow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="3" stdDeviation="4" flood-opacity="0.25" flood-color="#000000" />
+    </filter>
+  </defs>
+
+  <g id="zhep-emblem" transform="translate(300, 310)">
+    <!-- ==================== 1. SOARING EAGLE AT THE TOP ==================== -->
+    <!-- Maroon Eagle Silhouette: #420A0D -->
+    <g id="soaring-eagle" fill="#420A0D">
+      <!-- Left Outer Wing -->
+      <path d="M 0 -135 
+               C -25 -165 -65 -205 -125 -220 
+               C -160 -228 -215 -215 -235 -200 
+               C -220 -185 -195 -165 -165 -150 
+               C -200 -150 -215 -140 -205 -130 
+               C -180 -120 -150 -105 -120 -95 
+               C -140 -92 -155 -85 -145 -75 
+               C -125 -65 -90 -65 -60 -65 
+               C -35 -65 -15 -80 0 -95 Z" />
+
+      <!-- Left Wing White Feather Highlights -->
+      <path d="M -125 -220 
+               C -90 -200 -50 -170 -25 -145 
+               C -45 -135 -90 -120 -130 -140 
+               C -155 -155 -180 -170 -195 -180 
+               C -175 -195 -150 -210 -125 -220 Z" fill="#ffffff" />
+
+      <!-- Left Secondary Feather Strokes -->
+      <path d="M -60 -65 C -75 -85 -110 -105 -140 -115 C -115 -125 -75 -120 -40 -110 Z" fill="#420A0D" />
+
+      <!-- Right Outer Wing -->
+      <path d="M 0 -135 
+               C 25 -165 65 -205 125 -220 
+               C 160 -228 215 -215 235 -200 
+               C 220 -185 195 -165 165 -150 
+               C 200 -150 215 -140 205 -130 
+               C 180 -120 150 -105 120 -95 
+               C 140 -92 155 -85 145 -75 
+               C 125 -65 90 -65 60 -65 
+               C 35 -65 15 -80 0 -95 Z" />
+
+      <!-- Right Wing White Feather Highlights -->
+      <path d="M 125 -220 
+               C 90 -200 50 -170 25 -145 
+               C 45 -135 90 -120 130 -140 
+               C 155 -155 180 -170 195 -180 
+               C 175 -195 150 -210 125 -220 Z" fill="#ffffff" />
+
+      <!-- Right Secondary Feather Strokes -->
+      <path d="M 60 -65 C 75 -85 110 -105 140 -115 C 115 -125 75 -120 40 -110 Z" fill="#420A0D" />
+
+      <!-- Eagle Body & Breast -->
+      <path d="M 0 -155 
+               C -20 -155 -25 -130 -22 -100 
+               C -20 -70 -18 -45 -12 -25 
+               L 12 -25 
+               C 18 -45 20 -70 22 -100 
+               C 25 -130 20 -155 0 -155 Z" />
+
+      <!-- Eagle Head & Beak (Facing Right, with White Crown Plumage) -->
+      <!-- White Head & Neck -->
+      <path d="M 0 -185 
+               C -15 -185 -18 -165 -15 -150 
+               C -10 -138 0 -135 15 -135 
+               C 25 -135 32 -142 35 -155 
+               C 32 -170 20 -185 0 -185 Z" fill="#ffffff" />
+
+      <!-- Dark Eye -->
+      <circle cx="12" cy="-160" r="3.5" fill="#420A0D" />
+
+      <!-- Hooked Dark Beak -->
+      <path d="M 28 -156 
+               C 42 -154 48 -146 45 -136 
+               C 38 -140 32 -142 26 -144 Z" fill="#420A0D" />
+
+      <!-- Tail Feathers pointing downward -->
+      <path d="M -15 -35 L -20 -10 L -6 -15 L 0 -5 L 6 -15 L 20 -10 L 15 -35 Z" />
+
+      <!-- Strong Eagle Talons Clasping Top of Globe -->
+      <!-- Left Talon -->
+      <path d="M -22 -20 L -30 2 L -20 -2 L -15 4 L -10 -5 Z" />
+      <!-- Right Talon -->
+      <path d="M 22 -20 L 30 2 L 20 -2 L 15 4 L 10 -5 Z" />
+    </g>
+
+
+    <!-- ==================== 2. WIREFRAME GLOBE WITH GRID LINES ==================== -->
+    <g id="wireframe-globe" fill="#420A0D" stroke="#420A0D">
+      <!-- Outer Globe Perimeter Silhouette -->
+      <circle cx="0" cy="80" r="140" fill="none" stroke-width="12" />
+
+      <!-- Latitude Parallels (Curved Ellipses/Arcs) -->
+      <path d="M -136 40 C -70 70 70 70 136 40" fill="none" stroke-width="8" />
+      <path d="M -115 -10 C -60 15 60 15 115 -10" fill="none" stroke-width="8" />
+      <path d="M -136 120 C -70 150 70 150 136 120" fill="none" stroke-width="8" />
+      <path d="M -115 170 C -60 195 60 195 115 170" fill="none" stroke-width="8" />
+
+      <!-- Longitude Meridians (Curved Vertical Ellipses) -->
+      <path d="M 0 -60 L 0 220" fill="none" stroke-width="9" />
+      <ellipse cx="0" cy="80" rx="55" ry="140" fill="none" stroke-width="8" />
+      <ellipse cx="0" cy="80" rx="105" ry="140" fill="none" stroke-width="8" />
+
+      <!-- Globe Solid Grid Segments (Exact to original Zhep emblem pattern) -->
+      <!-- Upper Northern Hemisphere Blocks -->
+      <path d="M -45 -8 C -25 2 0 4 0 4 L 0 -55 C -20 -50 -40 -35 -45 -8 Z" />
+      <path d="M 45 -8 C 25 2 0 4 0 4 L 0 -55 C 20 -50 40 -35 45 -8 Z" />
+      <path d="M -95 12 C -70 22 -55 25 -55 25 L -52 -18 C -70 -12 -88 0 -95 12 Z" />
+      <path d="M 95 12 C 70 22 55 25 55 25 L 52 -18 C 70 -12 88 0 95 12 Z" />
+      <path d="M -128 32 C -112 40 -102 44 -102 44 L -100 12 C -115 18 -124 24 -128 32 Z" />
+      <path d="M 128 32 C 112 40 102 44 102 44 L 100 12 C 115 18 124 24 128 32 Z" />
+
+      <!-- Middle Upper Blocks Behind Ribbon -->
+      <path d="M -48 38 C -25 45 0 46 0 46 L 0 10 C -22 10 -42 6 -48 38 Z" />
+      <path d="M 48 38 C 25 45 0 46 0 46 L 0 10 C 22 10 42 6 48 38 Z" />
+      <path d="M -98 56 C -75 64 -56 66 -56 66 L -54 32 C -75 30 -92 24 -98 56 Z" />
+      <path d="M 98 56 C 75 64 56 66 56 66 L 54 32 C 75 30 92 24 98 56 Z" />
+
+      <!-- Lower Southern Hemisphere Radiating Fan / Base -->
+      <path d="M -50 148 C -25 156 0 158 0 158 L 0 125 C -25 123 -45 118 -50 148 Z" />
+      <path d="M 50 148 C 25 156 0 158 0 158 L 0 125 C 25 123 45 118 50 148 Z" />
+      <path d="M -98 135 C -75 145 -58 148 -58 148 L -55 120 C -75 116 -92 108 -98 135 Z" />
+      <path d="M 98 135 C 75 145 58 148 58 148 L 55 120 C 75 116 92 108 98 135 Z" />
+
+      <!-- Bottom Semi-circle Hub with Spoke Fan Rays -->
+      <path d="M -60 205 C -30 220 30 220 60 205 L 0 185 Z" />
+      <line x1="0" y1="185" x2="-80" y2="195" stroke-width="7" />
+      <line x1="0" y1="185" x2="-45" y2="215" stroke-width="7" />
+      <line x1="0" y1="185" x2="0" y2="220" stroke-width="7" />
+      <line x1="0" y1="185" x2="45" y2="215" stroke-width="7" />
+      <line x1="0" y1="185" x2="80" y2="195" stroke-width="7" />
+    </g>
+
+
+    <!-- ==================== 3. VIBRANT RED BANNER / RIBBON ==================== -->
+    <g id="ribbon-banner" filter="url(#ribbonGlow)">
+      <!-- Left Ribbon Back Fold / Tail -->
+      <path d="M -160 85 
+               C -175 60 -195 55 -215 65 
+               C -200 80 -185 95 -165 110 
+               C -158 98 -154 90 -160 85 Z" fill="url(#zhepRibbonFold)" />
+
+      <!-- Left Ribbon Underfold Shadow -->
+      <path d="M -160 85 L -165 110 L -140 102 L -145 78 Z" fill="#6e080d" />
+
+      <!-- Right Ribbon Back Fold / Tail -->
+      <path d="M 160 85 
+               C 175 60 195 55 215 65 
+               C 200 80 185 95 165 110 
+               C 158 98 154 90 160 85 Z" fill="url(#zhepRibbonFold)" />
+
+      <!-- Right Ribbon Underfold Shadow -->
+      <path d="M 160 85 L 165 110 L 140 102 L 145 78 Z" fill="#6e080d" />
+
+      <!-- Main Curved Red Banner (Flowing across the globe) -->
+      <path d="M -175 75 
+               C -90 115 90 115 175 75 
+               C 185 105 178 135 160 148 
+               C 85 185 -85 185 -160 148 
+               C -178 135 -185 105 -175 75 Z" 
+            fill="url(#zhepRibbonGrad)" />
+
+      <!-- Banner Edge Highlight Strokes -->
+      <path d="M -173 77 C -90 113 90 113 173 77" fill="none" stroke="#ff7378" stroke-width="2.5" opacity="0.6" />
+      <path d="M -158 146 C -85 183 85 183 158 146" fill="none" stroke="#7a080e" stroke-width="3" opacity="0.8" />
+
+
+      <!-- ==================== 4. WHITE CALLIGRAPHY: 'झेप' ==================== -->
+      <!-- Exquisite White Devanagari Calligraphy with authentic brush stroke swashes -->
+      <g id="zhep-calligraphy" fill="#ffffff" transform="translate(0, 120)">
+        <!-- Horizontal Shirorekha (Top Header Bar across 'झे' and 'प') -->
+        <path d="M -75 -24 
+                 C -45 -25 15 -25 65 -22 
+                 C 68 -22 68 -18 64 -18 
+                 C 15 -20 -45 -20 -75 -19 
+                 C -78 -19 -78 -24 -75 -24 Z" />
+
+        <!-- Vowel Matra 'े' on 'झ' extending upward-left -->
+        <path d="M -48 -24 
+                 C -58 -38 -70 -48 -80 -52 
+                 C -82 -53 -80 -55 -76 -54 
+                 C -65 -50 -54 -38 -45 -24 Z" />
+
+        <!-- Calligraphic Letter 'झ' (Zha) -->
+        <!-- Upper 'T' stem & top bowl of 'झ' -->
+        <path d="M -50 -20 L -50 -10 
+                 C -50 -6 -56 -4 -62 -4 
+                 C -70 -4 -72 5 -66 10 
+                 C -58 16 -48 10 -48 2 
+                 L -48 14 
+                 C -48 18 -52 24 -60 26 
+                 C -68 28 -74 20 -72 12 
+                 C -76 14 -77 22 -72 28 
+                 C -65 35 -48 34 -44 22 
+                 L -44 -20 Z" />
+
+        <!-- Middle connector bridge of 'झ' -->
+        <path d="M -48 6 C -38 6 -32 6 -26 6 L -26 -1 C -35 -1 -42 0 -48 1 Z" />
+
+        <!-- Vertical Stem & Swash Foot of 'झ' -->
+        <path d="M -26 -20 L -21 -20 L -21 24 C -21 32 -30 38 -42 39 C -38 35 -30 30 -29 22 L -26 -20 Z" />
+
+        <!-- Calligraphic Letter 'प' (Pa) -->
+        <!-- Left curve flowing down into right vertical stem -->
+        <path d="M -8 -20 L -3 -20 L -3 2 
+                 C -3 14 6 18 18 18 
+                 C 25 18 32 15 35 10 
+                 L 35 -20 L 41 -20 L 41 24 
+                 C 41 26 37 26 35 24 
+                 L 35 15 
+                 C 30 21 22 24 14 24 
+                 C -2 24 -10 16 -10 0 
+                 L -10 -20 Z" />
+
+        <!-- Artistic Calligraphic Tail Swash (Extending gracefully from base of 'प') -->
+        <path d="M 40 22 
+                 C 55 24 75 22 95 14 
+                 C 100 12 102 15 97 17 
+                 C 78 26 56 28 39 26 Z" />
+      </g>
+    </g>
+  </g>
+</svg>

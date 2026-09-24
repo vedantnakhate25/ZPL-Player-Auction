@@ -1,0 +1,105 @@
+@import "tailwindcss";
+
+@theme {
+  --color-gold-50: #fffbeb;
+  --color-gold-100: #fef3c7;
+  --color-gold-200: #fde68a;
+  --color-gold-300: #fcd34d;
+  --color-gold-400: #fbbf24;
+  --color-gold-500: #f59e0b;
+  --color-gold-600: #d97706;
+  --color-gold-700: #b45309;
+
+  --color-black-950: #000000;
+  --color-black-900: #080808;
+  --color-black-850: #101010;
+  --color-black-800: #181818;
+  --color-black-750: #222222;
+  --color-black-700: #2c2c2c;
+}
+
+@layer utilities {
+  .perspective-1000 {
+    perspective: 1000px;
+  }
+  .perspective-1500 {
+    perspective: 1500px;
+  }
+  .preserve-3d {
+    transform-style: preserve-3d;
+  }
+  .backface-hidden {
+    backface-visibility: hidden;
+  }
+}
+
+/* Custom Cricket Auction Glows and 3D Card Animation */
+@keyframes floatCard {
+  0%, 100% {
+    transform: translateY(0px) rotateX(2deg) rotateY(-1deg);
+  }
+  50% {
+    transform: translateY(-8px) rotateX(-2deg) rotateY(1deg);
+  }
+}
+
+@keyframes pulseGold {
+  0%, 100% {
+    box-shadow: 0 0 25px rgba(245, 158, 11, 0.3), 0 0 50px rgba(234, 179, 8, 0.2);
+  }
+  50% {
+    box-shadow: 0 0 45px rgba(245, 158, 11, 0.55), 0 0 80px rgba(234, 179, 8, 0.35);
+  }
+}
+
+@keyframes pulseSold {
+  0%, 100% {
+    box-shadow: 0 0 35px rgba(34, 197, 94, 0.4), 0 0 70px rgba(34, 197, 94, 0.2);
+    transform: scale(1);
+  }
+  50% {
+    box-shadow: 0 0 65px rgba(34, 197, 94, 0.7), 0 0 100px rgba(34, 197, 94, 0.4);
+    transform: scale(1.02);
+  }
+}
+
+@keyframes pulseUnsold {
+  0%, 100% {
+    box-shadow: 0 0 35px rgba(239, 68, 68, 0.5), 0 0 70px rgba(245, 158, 11, 0.3);
+  }
+  50% {
+    box-shadow: 0 0 65px rgba(239, 68, 68, 0.8), 0 0 100px rgba(245, 158, 11, 0.5);
+  }
+}
+
+.animate-float-card {
+  animation: floatCard 6s ease-in-out infinite;
+}
+
+.animate-pulse-gold {
+  animation: pulseGold 3s ease-in-out infinite;
+}
+
+.animate-pulse-sold {
+  animation: pulseSold 1.5s ease-in-out infinite;
+}
+
+.animate-pulse-unsold {
+  animation: pulseUnsold 1.5s ease-in-out infinite;
+}
+
+/* Custom Scrollbar - Pure Black & Metallic Gold */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #000000;
+}
+::-webkit-scrollbar-thumb {
+  background: #d97706;
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #fbbf24;
+}
