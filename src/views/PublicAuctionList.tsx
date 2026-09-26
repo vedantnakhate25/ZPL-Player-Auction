@@ -160,17 +160,9 @@ export function PublicAuctionList({
       </div>
 
       {/* FOOTER */}
-      <footer className="max-w-6xl mx-auto w-full pt-8 mt-12 border-t border-zinc-800 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-zinc-400">
-        <div className="flex items-center gap-2">
-          <Trophy className="w-4 h-4 text-amber-400" />
-          <span className="font-bold text-white">ZPL &bull; ZHEP PREMIER LEAGUE (ZHEP KRIDA MANDAL)</span>
-        </div>
-        <button
-          onClick={onNavigateAdmin}
-          className="hover:text-amber-400 transition-colors cursor-pointer font-bold"
-        >
-          Administrator Login
-        </button>
+      <footer className="max-w-6xl mx-auto w-full pt-8 mt-12 border-t border-zinc-800 flex items-center justify-center gap-2 text-xs text-zinc-400">
+        <Trophy className="w-4 h-4 text-amber-400" />
+        <span className="font-bold text-white">ZPL &bull; ZHEP PREMIER LEAGUE (ZHEP KRIDA MANDAL)</span>
       </footer>
     </div>
   );

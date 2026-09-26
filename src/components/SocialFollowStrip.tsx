@@ -22,7 +22,7 @@ export function SocialFollowStrip({
     >
       {/* INSTAGRAM LINK */}
       <a
-        href="https://instagram.com/zhepkridamandal"
+        href="https://www.instagram.com/zhep_krida_mandal?stkn=NjZpMXY0d25rb2t1"
         target="_blank"
         rel="noreferrer"
         className={`inline-flex items-center gap-1.5 font-bold transition-all hover:scale-105 active:scale-95 text-zinc-300 hover:text-white ${
@@ -36,7 +36,7 @@ export function SocialFollowStrip({
         <span className="whitespace-nowrap">
           Follow us on IG{' '}
           <strong className="text-amber-400 underline underline-offset-2">
-            @zhepkridamandal
+            @zhep_krida_mandal
           </strong>
         </span>
       </a>
@@ -48,7 +48,7 @@ export function SocialFollowStrip({
 
       {/* FACEBOOK LINK */}
       <a
-        href="https://www.facebook.com/search/top?q=Zhep%20Krida%20mandal"
+        href="https://www.facebook.com/zhepkrida.mandal"
         target="_blank"
         rel="noreferrer"
         className={`inline-flex items-center gap-1.5 font-bold transition-all hover:scale-105 active:scale-95 text-zinc-300 hover:text-white ${

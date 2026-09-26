@@ -1,17 +1,20 @@
-import React from 'react';
+import React, { memo } from 'react';
 
 interface ZPLAuctionStageEmblemProps {
   className?: string;
   size?: number;
 }
 
-export function ZPLAuctionStageEmblem({ className = '', size = 520 }: ZPLAuctionStageEmblemProps) {
-  // 16 radial angles for the golden gavels surrounding the octagon
-  const gavelAngles = Array.from({ length: 16 }, (_, i) => i * 22.5);
+// 16 radial angles for the golden gavels surrounding the octagon (static constant)
+const GAVEL_ANGLES = Array.from({ length: 16 }, (_, i) => i * 22.5);
 
-  // Bead points for the outer perimeter halo
-  const beadCount = 64;
-  const beadAngles = Array.from({ length: beadCount }, (_, i) => (i * 360) / beadCount);
+// Bead points for the outer perimeter halo (static constant)
+const BEAD_COUNT = 64;
+const BEAD_ANGLES = Array.from({ length: BEAD_COUNT }, (_, i) => (i * 360) / BEAD_COUNT);
+
+export const ZPLAuctionStageEmblem = memo(function ZPLAuctionStageEmblem({ className = '', size = 520 }: ZPLAuctionStageEmblemProps) {
+  const gavelAngles = GAVEL_ANGLES;
+  const beadAngles = BEAD_ANGLES;
 
   return (
     <div className={`relative flex items-center justify-center select-none ${className}`}>
@@ -403,4 +406,4 @@ export function ZPLAuctionStageEmblem({ className = '', size = 520 }: ZPLAuction
       </svg>
     </div>
   );
-}
+});

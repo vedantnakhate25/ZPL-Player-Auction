@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import type { Team, Player } from '../types/auction';
 import {
   Coins,
@@ -52,19 +52,39 @@ export function TeamPurseBoard({
     );
   }
 
-  // Calculate players bought for the selected team
-  const selectedTeamPlayers = selectedTeam
-    ? players.filter(
-        (p) =>
-          p.status === 'sold' &&
-          (p.soldToTeamId === selectedTeam.id || p.soldToTeamName === selectedTeam.name)
-      )
-    : [];
+  // Precompute team bought player count map with useMemo for O(1) lookups without render lag
+  const teamBoughtCountMap = useMemo(() => {
+    const map: Record<string, number> = {};
+    for (let i = 0; i < players.length; i++) {
+      const p = players[i];
+      if (p.status === 'sold') {
+        if (p.soldToTeamId) {
+          map[p.soldToTeamId] = (map[p.soldToTeamId] || 0) + 1;
+        }
+        if (p.soldToTeamName) {
+          map[p.soldToTeamName.toLowerCase()] = (map[p.soldToTeamName.toLowerCase()] || 0) + 1;
+        }
+      }
+    }
+    return map;
+  }, [players]);
 
-  // Sort bought players by soldPoints descending
-  const sortedBoughtPlayers = [...selectedTeamPlayers].sort(
-    (a, b) => (b.soldPoints ?? b.basePoints) - (a.soldPoints ?? a.basePoints)
-  );
+  // Calculate players bought for the selected team (memoized)
+  const selectedTeamPlayers = useMemo(() => {
+    if (!selectedTeam) return [];
+    return players.filter(
+      (p) =>
+        p.status === 'sold' &&
+        (p.soldToTeamId === selectedTeam.id || p.soldToTeamName === selectedTeam.name)
+    );
+  }, [selectedTeam, players]);
+
+  // Sort bought players by soldPoints descending (memoized)
+  const sortedBoughtPlayers = useMemo(() => {
+    return [...selectedTeamPlayers].sort(
+      (a, b) => (b.soldPoints ?? b.basePoints) - (a.soldPoints ?? a.basePoints)
+    );
+  }, [selectedTeamPlayers]);
 
   return (
     <div className="w-full space-y-3">
@@ -104,11 +124,7 @@ export function TeamPurseBoard({
           );
 
           const teamBoughtCount = players.length > 0
-            ? players.filter(
-                (p) =>
-                  p.status === 'sold' &&
-                  (p.soldToTeamId === team.id || p.soldToTeamName === team.name)
-              ).length
+            ? (teamBoughtCountMap[team.id] ?? teamBoughtCountMap[team.name.toLowerCase()] ?? 0)
             : (team.purchasedPlayerCount || 0);
 
           return (

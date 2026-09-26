@@ -23,8 +23,7 @@ export function ZPLAuctionStageHero({
       <div className="absolute -top-32 left-1/4 w-96 h-96 rounded-full bg-gradient-to-b from-amber-400/20 via-amber-500/5 to-transparent blur-3xl pointer-events-none transform -rotate-12" />
       <div className="absolute -top-32 right-1/4 w-96 h-96 rounded-full bg-gradient-to-b from-amber-400/20 via-amber-500/5 to-transparent blur-3xl pointer-events-none transform rotate-12" />
       
-      {/* Arena subtle horizon line & glow */}
-      <div className="absolute top-1/2 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-amber-500/20 to-transparent pointer-events-none" />
+      {/* Bottom fade */}
       <div className="absolute bottom-0 left-0 right-0 h-40 bg-gradient-to-t from-black via-black/90 to-transparent z-10 pointer-events-none" />
 
       {/* TOP HEADER STRIP */}
@@ -78,14 +77,10 @@ export function ZPLAuctionStageHero({
             <span>ZHEP PREMIER LEAGUE &bull; OFFICIAL AUCTION</span>
           </div>
 
-          {/* Main Title: "ZPL 2027 Player Auction List Announced" */}
-          <h2 className="text-2xl sm:text-4xl md:text-5xl font-black text-white tracking-tight drop-shadow-[0_4px_16px_rgba(0,0,0,0.9)] leading-tight">
-            ZPL 2027 Player Auction List Announced
+          {/* Main Title */}
+          <h2 className="text-2xl sm:text-4xl md:text-5xl font-black text-white tracking-tight drop-shadow-[0_4px_16px_rgba(0,0,0,0.9)] leading-tight pb-2">
+            ZPL 2027 Player Auction
           </h2>
-
-          <p className="text-xs sm:text-base text-zinc-300 font-medium max-w-xl mx-auto leading-relaxed pb-2">
-            Live real-time bidding console, big-screen projector view, instant team purse points tracking, and official squad allocations.
-          </p>
         </div>
       </div>
     </div>

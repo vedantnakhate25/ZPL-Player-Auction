@@ -1,8 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import type { Auction, AuctionState, Team, Player } from '../types/auction';
 import { ZPLAuctionStageEmblem } from './ZPLAuctionStageEmblem';
 import { Trophy, Shield, Target, Zap, Award, Sparkles, Check, X, Radio } from 'lucide-react';
-import { FooterCopyright } from './FooterCopyright';
 
 interface ZPLBroadcastPlayerStageProps {
   auction: Auction;
@@ -31,28 +30,32 @@ export function ZPLBroadcastPlayerStage({
   const isSold = auctionState.playerStatus === 'sold';
   const isUnsold = auctionState.playerStatus === 'unsold';
 
-  // Current team holding the highest bid
-  const holdingTeam = teams.find(
-    (t) => t.id === auctionState.winningTeamId || (auctionState.winningTeamName && t.name.toLowerCase() === auctionState.winningTeamName.toLowerCase())
-  ) || (auctionState.winningTeamName ? {
-    id: auctionState.winningTeamId || 'bid-team',
-    name: auctionState.winningTeamName,
-    logoUrl: auctionState.winningTeamLogo,
-    purse: 1000,
-    remainingPurse: 1000,
-    purchasedPlayerCount: 0,
-    totalSpent: 0,
-    auctionId: auction.id,
-    createdAt: ''
-  } as Team : null);
+  // Current team holding the highest bid (memoized)
+  const holdingTeam = useMemo(() => {
+    return teams.find(
+      (t) => t.id === auctionState.winningTeamId || (auctionState.winningTeamName && t.name.toLowerCase() === auctionState.winningTeamName.toLowerCase())
+    ) || (auctionState.winningTeamName ? {
+      id: auctionState.winningTeamId || 'bid-team',
+      name: auctionState.winningTeamName,
+      logoUrl: auctionState.winningTeamLogo,
+      purse: 1000,
+      remainingPurse: 1000,
+      purchasedPlayerCount: 0,
+      totalSpent: 0,
+      auctionId: auction.id,
+      createdAt: ''
+    } as Team : null);
+  }, [teams, auctionState.winningTeamId, auctionState.winningTeamName, auctionState.winningTeamLogo, auction.id]);
 
   const holdingTeamLogo = holdingTeam?.logoUrl || auctionState.winningTeamLogo || '';
 
-  // Total points spent across all teams
-  const totalPointsSpent = teams.reduce((sum, team) => {
-    const spent = team.totalSpent ?? Math.max(0, (team.purse || 0) - (team.remainingPurse || 0));
-    return sum + spent;
-  }, 0);
+  // Total points spent across all teams (memoized)
+  const totalPointsSpent = useMemo(() => {
+    return teams.reduce((sum, team) => {
+      const spent = team.totalSpent ?? Math.max(0, (team.purse || 0) - (team.remainingPurse || 0));
+      return sum + spent;
+    }, 0);
+  }, [teams]);
 
   // Tournament / Auction Title
   const tournamentTitle = 'ZPL AUCTION 2027';
@@ -133,31 +136,26 @@ export function ZPLBroadcastPlayerStage({
               strokeLinecap="square"
             />
 
-            {/* Inner Accent Parallel Line */}
-            <path
-              d="M 45 124 L 100 124 L 100 84 L 160 84 L 160 24 L 840 24 L 840 84 L 900 84 L 900 124 L 955 124"
-              stroke="#fbbf24"
-              strokeWidth="1.2"
-              strokeOpacity="0.65"
-            />
+            {/* Symmetrically Aligned Gold Corner Rivets / Illuminated Bulbs */}
+            {/* Top Ceiling Corners */}
+            <circle cx="150" cy="16" r="3.5" fill="#fef08a" stroke="#d97706" strokeWidth="1" filter="url(#goldHeaderGlow)" />
+            <circle cx="850" cy="16" r="3.5" fill="#fef08a" stroke="#d97706" strokeWidth="1" filter="url(#goldHeaderGlow)" />
 
-            {/* Top Ceiling Rivets / Illuminated Corner Bulbs */}
-            <circle cx="150" cy="16" r="3.5" fill="#ffffff" filter="url(#goldHeaderGlow)" />
-            <circle cx="850" cy="16" r="3.5" fill="#ffffff" filter="url(#goldHeaderGlow)" />
+            {/* Upper Step Corners */}
+            <circle cx="150" cy="76" r="3" fill="#fbbf24" stroke="#b45309" strokeWidth="1" />
+            <circle cx="850" cy="76" r="3" fill="#fbbf24" stroke="#b45309" strokeWidth="1" />
 
-            {/* Step 1 Middle Corners (Gold Bulbs) */}
-            <circle cx="90" cy="76" r="3" fill="#f59e0b" />
-            <circle cx="910" cy="76" r="3" fill="#f59e0b" />
+            {/* Middle Step Corners */}
+            <circle cx="90" cy="76" r="3" fill="#fbbf24" stroke="#b45309" strokeWidth="1" />
+            <circle cx="910" cy="76" r="3" fill="#fbbf24" stroke="#b45309" strokeWidth="1" />
 
-            {/* Outer Ends Accent Dots */}
-            <circle cx="30" cy="118" r="2.5" fill="#d97706" />
-            <circle cx="970" cy="118" r="2.5" fill="#d97706" />
+            {/* Lower Step Corners */}
+            <circle cx="90" cy="118" r="3" fill="#f59e0b" stroke="#78350f" strokeWidth="1" />
+            <circle cx="910" cy="118" r="3" fill="#f59e0b" stroke="#78350f" strokeWidth="1" />
 
-            {/* Inner Parallel Line Corner Accents */}
-            <circle cx="160" cy="24" r="2" fill="#fbbf24" />
-            <circle cx="840" cy="24" r="2" fill="#fbbf24" />
-            <circle cx="100" cy="84" r="1.5" fill="#fbbf24" />
-            <circle cx="900" cy="84" r="1.5" fill="#fbbf24" />
+            {/* Terminal Base End Points */}
+            <circle cx="30" cy="118" r="3" fill="#d97706" />
+            <circle cx="970" cy="118" r="3" fill="#d97706" />
 
             {/* MAIN TOURNAMENT TITLE: ZPL AUCTION 2027 (Generous top clearance) */}
             <text
@@ -662,9 +660,6 @@ export function ZPLBroadcastPlayerStage({
           </p>
         </div>
       </div>
-
-      {/* FOOTER COPYRIGHT */}
-      <FooterCopyright className="pt-2 pb-1" />
     </div>
   );
 }

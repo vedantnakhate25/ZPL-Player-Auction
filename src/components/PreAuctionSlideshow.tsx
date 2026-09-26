@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import type { Auction, Team, PreAuctionPhoto } from '../types/auction';
 import {
@@ -24,7 +24,7 @@ export function PreAuctionSlideshow({
   teams,
   isProjectorMode = false
 }: PreAuctionSlideshowProps) {
-  const slides: PreAuctionPhoto[] = (() => {
+  const slides: PreAuctionPhoto[] = useMemo(() => {
     const adminPhotos = auction.preAuctionPhotos || [];
     const list: PreAuctionPhoto[] = [];
 
@@ -60,7 +60,7 @@ export function PreAuctionSlideshow({
     });
 
     return list;
-  })();
+  }, [auction.preAuctionPhotos, teams]);
 
   const [currentIndex, setCurrentIndex] = useState(0);
 
@@ -218,7 +218,7 @@ export function PreAuctionSlideshow({
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-left">
                       {/* INSTAGRAM CARD */}
                       <a
-                        href="https://instagram.com/zhepkridamandal"
+                        href="https://www.instagram.com/zhep_krida_mandal?stkn=NjZpMXY0d25rb2t1"
                         target="_blank"
                         rel="noreferrer"
                         className="group p-3 sm:p-4 rounded-2xl bg-black border border-zinc-800 hover:border-amber-400/60 transition-all shadow-md hover:shadow-xl active:scale-98 flex flex-col justify-between"
@@ -240,7 +240,7 @@ export function PreAuctionSlideshow({
                             Follow us on IG
                           </p>
                           <p className="text-base sm:text-lg font-black text-white group-hover:text-amber-400 transition-colors">
-                            @zhepkridamandal
+                            @zhep_krida_mandal
                           </p>
                           <span className="text-[10px] text-zinc-500 font-medium block pt-0.5">
                             Stories &bull; Highlights &bull; Reels
@@ -250,7 +250,7 @@ export function PreAuctionSlideshow({
 
                       {/* FACEBOOK CARD */}
                       <a
-                        href="https://www.facebook.com/search/top?q=Zhep%20Krida%20mandal"
+                        href="https://www.facebook.com/zhepkrida.mandal"
                         target="_blank"
                         rel="noreferrer"
                         className="group p-3 sm:p-4 rounded-2xl bg-black border border-zinc-800 hover:border-amber-400/60 transition-all shadow-md hover:shadow-xl active:scale-98 flex flex-col justify-between"
