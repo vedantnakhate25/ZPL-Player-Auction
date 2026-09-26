@@ -10,7 +10,8 @@ import {
   type User 
 } from 'firebase/auth';
 import { 
-  initializeFirestore, 
+  getFirestore, 
+  setLogLevel,
   doc, 
   getDocFromServer,
   collection,
@@ -29,15 +30,11 @@ import firebaseConfig from '../../firebase-applet-config.json';
 
 const app = initializeApp(firebaseConfig);
 
-// Initialize Firestore with experimentalForceLongPolling to avoid 10s WebChannel stream
-// connection timeouts in browser iframes, proxies, and constrained network environments
-export const db = initializeFirestore(
-  app,
-  {
-    experimentalForceLongPolling: true,
-  },
-  firebaseConfig.firestoreDatabaseId
-);
+// Suppress transient network offline / reconnect warnings in console
+setLogLevel('error');
+
+// Canonical Firestore initialization as specified in the Firebase skill
+export const db = getFirestore(app, firebaseConfig.firestoreDatabaseId);
 export const auth = getAuth(app);
 export const googleProvider = new GoogleAuthProvider();
 
@@ -92,13 +89,26 @@ export function handleFirestoreError(error: unknown, operationType: OperationTyp
 async function testConnection() {
   try {
     await getDocFromServer(doc(db, 'test', 'connection'));
-  } catch (error) {
-    if (error instanceof Error && (error.message.includes('the client is offline') || error.message.includes('Backend didn\'t respond'))) {
-      console.info("Firestore operating in offline cache mode until connection is confirmed.");
+  } catch (error: unknown) {
+    const err = error as { message?: string; code?: string };
+    const msg = err?.message || String(error);
+    const code = err?.code || '';
+    if (
+      code === 'unavailable' ||
+      msg.includes('offline') ||
+      msg.includes('unavailable') ||
+      msg.includes("Backend didn't respond") ||
+      msg.includes('Could not reach Cloud Firestore')
+    ) {
+      // Client operates in offline mode gracefully until network sync is confirmed
+      return;
     }
   }
 }
-testConnection();
+
+if (typeof window !== 'undefined') {
+  setTimeout(testConnection, 1500);
+}
 
 export {
   signInWithPopup,

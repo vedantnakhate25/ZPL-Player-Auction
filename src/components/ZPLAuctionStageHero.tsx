@@ -47,10 +47,14 @@ export function ZPLAuctionStageHero({
 
         <div className="flex items-center gap-2">
           {liveAuction && (
-            <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-red-600/90 text-white text-xs font-black uppercase tracking-wider animate-pulse shadow-md">
+            <button
+              onClick={() => onSelectAuction && onSelectAuction(liveAuction.id)}
+              className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-red-600 hover:bg-red-500 text-white text-xs font-black uppercase tracking-wider animate-pulse shadow-md transition-all cursor-pointer"
+              title="Click to view live auction"
+            >
               <Radio className="w-3.5 h-3.5" />
               <span>Auction Live Now</span>
-            </div>
+            </button>
           )}
           <button
             onClick={onNavigateAdmin}

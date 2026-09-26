@@ -11,6 +11,8 @@ import { AdminManageTeams } from './views/AdminManageTeams';
 import { AdminManagePlayers } from './views/AdminManagePlayers';
 import { AdminAuctionResults } from './views/AdminAuctionResults';
 import { FooterCopyright } from './components/FooterCopyright';
+import { ErrorBoundary } from './components/ErrorBoundary';
+import { safeStorage } from './lib/storage';
 
 type AppView =
   | 'public-list'
@@ -27,7 +29,7 @@ export default function App() {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
   const [isAdminAuthenticated, setIsAdminAuthenticated] = useState<boolean>(() => {
-    return sessionStorage.getItem('zhep_admin_session') === 'authenticated';
+    return safeStorage.getItem('zhep_admin_session') === 'authenticated';
   });
 
   // Router State
@@ -64,7 +66,7 @@ export default function App() {
     } else if (adminParam === 'login') {
       setCurrentView('admin-login');
     } else if (adminParam === 'dashboard' || window.location.pathname.startsWith('/admin')) {
-      const isAuthed = sessionStorage.getItem('zhep_admin_session') === 'authenticated';
+      const isAuthed = safeStorage.getItem('zhep_admin_session') === 'authenticated';
       setCurrentView(isAuthed ? 'admin-dashboard' : 'admin-login');
     }
   }, []);
@@ -101,6 +103,7 @@ export default function App() {
   };
 
   const handleAdminLoginSuccess = () => {
+    safeStorage.setItem('zhep_admin_session', 'authenticated');
     setIsAdminAuthenticated(true);
     setCurrentView('admin-dashboard');
     const url = new URL(window.location.href);
@@ -110,7 +113,7 @@ export default function App() {
   };
 
   const handleAdminLogout = () => {
-    sessionStorage.removeItem('zhep_admin_session');
+    safeStorage.removeItem('zhep_admin_session');
     setIsAdminAuthenticated(false);
     setCurrentView('public-list');
     const url = new URL(window.location.href);
@@ -270,7 +273,9 @@ export default function App() {
   return (
     <div className="min-h-screen flex flex-col justify-between bg-black text-white selection:bg-amber-400 selection:text-black">
       <div className="flex-1 flex flex-col">
-        {renderView()}
+        <ErrorBoundary onReset={handleNavigateHome}>
+          {renderView()}
+        </ErrorBoundary>
       </div>
       <FooterCopyright />
     </div>

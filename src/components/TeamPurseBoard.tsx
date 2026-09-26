@@ -55,14 +55,16 @@ export function TeamPurseBoard({
   // Precompute team bought player count map with useMemo for O(1) lookups without render lag
   const teamBoughtCountMap = useMemo(() => {
     const map: Record<string, number> = {};
+    if (!Array.isArray(players)) return map;
     for (let i = 0; i < players.length; i++) {
       const p = players[i];
-      if (p.status === 'sold') {
+      if (p && p.status === 'sold') {
         if (p.soldToTeamId) {
           map[p.soldToTeamId] = (map[p.soldToTeamId] || 0) + 1;
         }
-        if (p.soldToTeamName) {
-          map[p.soldToTeamName.toLowerCase()] = (map[p.soldToTeamName.toLowerCase()] || 0) + 1;
+        if (typeof p.soldToTeamName === 'string' && p.soldToTeamName.trim()) {
+          const key = p.soldToTeamName.trim().toLowerCase();
+          map[key] = (map[key] || 0) + 1;
         }
       }
     }
@@ -123,8 +125,9 @@ export function TeamPurseBoard({
             Math.min(100, Math.round((team.remainingPurse / (team.purse || 1)) * 100))
           );
 
+          const teamNameKey = typeof team.name === 'string' ? team.name.trim().toLowerCase() : '';
           const teamBoughtCount = players.length > 0
-            ? (teamBoughtCountMap[team.id] ?? teamBoughtCountMap[team.name.toLowerCase()] ?? 0)
+            ? (teamBoughtCountMap[team.id] ?? (teamNameKey ? teamBoughtCountMap[teamNameKey] : 0) ?? 0)
             : (team.purchasedPlayerCount || 0);
 
           return (

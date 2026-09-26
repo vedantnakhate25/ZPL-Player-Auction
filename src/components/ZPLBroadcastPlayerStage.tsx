@@ -21,20 +21,23 @@ export function ZPLBroadcastPlayerStage({
   const [photoError, setPhotoError] = useState(false);
 
   // Current player details
-  const playerName = (auctionState.currentPlayerName || 'Player on Floor').toUpperCase();
-  const playerRole = auctionState.currentPlayerRole || 'All-Rounder';
-  const playerPhoto = auctionState.currentPlayerPhoto || '';
-  const basePoints = auctionState.currentPlayerBasePoints ?? 50;
-  const currentBid = auctionState.currentBidPoints ?? basePoints;
-  const isBiddingActive = (auctionState.currentBidPoints ?? 0) > basePoints;
-  const isSold = auctionState.playerStatus === 'sold';
-  const isUnsold = auctionState.playerStatus === 'unsold';
+  const playerName = String(auctionState?.currentPlayerName || 'Player on Floor').toUpperCase();
+  const playerRole = auctionState?.currentPlayerRole || 'All-Rounder';
+  const playerPhoto = auctionState?.currentPlayerPhoto || '';
+  const basePoints = auctionState?.currentPlayerBasePoints ?? 50;
+  const currentBid = auctionState?.currentBidPoints ?? basePoints;
+  const isBiddingActive = (auctionState?.currentBidPoints ?? 0) > basePoints;
+  const isSold = auctionState?.playerStatus === 'sold';
+  const isUnsold = auctionState?.playerStatus === 'unsold';
 
   // Current team holding the highest bid (memoized)
   const holdingTeam = useMemo(() => {
+    if (!Array.isArray(teams)) return null;
+    const winningName = typeof auctionState?.winningTeamName === 'string' ? auctionState.winningTeamName.toLowerCase().trim() : '';
     return teams.find(
-      (t) => t.id === auctionState.winningTeamId || (auctionState.winningTeamName && t.name.toLowerCase() === auctionState.winningTeamName.toLowerCase())
-    ) || (auctionState.winningTeamName ? {
+      (t) => (t && t.id && auctionState?.winningTeamId && t.id === auctionState.winningTeamId) ||
+             (winningName && t && typeof t.name === 'string' && t.name.toLowerCase().trim() === winningName)
+    ) || (auctionState?.winningTeamName ? {
       id: auctionState.winningTeamId || 'bid-team',
       name: auctionState.winningTeamName,
       logoUrl: auctionState.winningTeamLogo,
@@ -45,7 +48,7 @@ export function ZPLBroadcastPlayerStage({
       auctionId: auction.id,
       createdAt: ''
     } as Team : null);
-  }, [teams, auctionState.winningTeamId, auctionState.winningTeamName, auctionState.winningTeamLogo, auction.id]);
+  }, [teams, auctionState?.winningTeamId, auctionState?.winningTeamName, auctionState?.winningTeamLogo, auction.id]);
 
   const holdingTeamLogo = holdingTeam?.logoUrl || auctionState.winningTeamLogo || '';
 

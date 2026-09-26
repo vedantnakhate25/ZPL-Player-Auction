@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { db, doc, collection, setDoc, deleteDoc, onSnapshot } from './firebase';
+import { safeStorage } from './storage';
 
 /**
  * Tracks real-time active viewers for an auction with high performance and zero lag.
@@ -15,10 +16,10 @@ export function useLiveViewers(auctionId: string | undefined | null, isViewer: b
   useEffect(() => {
     if (!auctionId || !isViewer) return;
 
-    let viewerId = sessionStorage.getItem('zhep_viewer_session_id');
+    let viewerId = safeStorage.getItem('zhep_viewer_session_id');
     if (!viewerId) {
       viewerId = 'viewer_' + Math.random().toString(36).substring(2, 11);
-      sessionStorage.setItem('zhep_viewer_session_id', viewerId);
+      safeStorage.setItem('zhep_viewer_session_id', viewerId);
     }
 
     const viewerDocRef = doc(db, 'auctions', auctionId, 'viewers', viewerId);
