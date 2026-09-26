@@ -11,7 +11,6 @@ import {
   Share2,
   Trophy
 } from 'lucide-react';
-import { SocialFollowStrip } from './SocialFollowStrip';
 
 interface PreAuctionSlideshowProps {
   auction: Auction;
@@ -319,11 +318,6 @@ function PreAuctionSlideshowComponent({
           </AnimatePresence>
         )}
       </div>
-
-      {/* PERSISTENT SOCIAL STRIP AT BOTTOM OF PRE-AUCTION SHOWCASE PANEL */}
-      {!isProjectorMode && (
-        <SocialFollowStrip variant="dark" />
-      )}
     </div>
   );
 }

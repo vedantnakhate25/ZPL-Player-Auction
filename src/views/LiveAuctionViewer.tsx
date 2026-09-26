@@ -629,9 +629,6 @@ export function LiveAuctionViewer({
                 <strong className="text-amber-400 font-black">{soldCount}</strong> /{' '}
                 {totalPlayers}.
               </p>
-              <div className="pt-1">
-                <SocialFollowStrip variant="dark" />
-              </div>
             </div>
             <div className={`w-full ${isProjectorMode ? 'flex-1 min-h-0 pt-2 overflow-y-auto' : 'pt-4'}`}>
               <TeamPurseBoard teams={teams} players={players} isProjectorMode={isProjectorMode} />
@@ -703,9 +700,6 @@ export function LiveAuctionViewer({
                 <p className="text-zinc-300 text-sm sm:text-base">
                   The auction is currently live! The next player will be presented on screen momentarily.
                 </p>
-                <div className="pt-2">
-                  <SocialFollowStrip variant="dark" />
-                </div>
               </div>
 
               <PreAuctionSlideshow

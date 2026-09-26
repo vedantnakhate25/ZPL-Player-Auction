@@ -10,7 +10,6 @@ import {
   Award,
   Shield
 } from 'lucide-react';
-import { SocialFollowStrip } from './SocialFollowStrip';
 
 interface TeamPurseBoardProps {
   teams: Team[];
@@ -240,9 +239,6 @@ function TeamPurseBoardComponent({
           );
         })}
       </div>
-
-      {/* SOCIAL MEDIA FOOTER STRIP AT BOTTOM OF TEAMS PURSE PANEL */}
-      <SocialFollowStrip variant="dark" className="mt-4" />
 
       {/* TEAM SQUAD & REMAINING PURSE DETAILS MODAL */}
       {selectedTeam && (

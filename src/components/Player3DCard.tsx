@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import type { PlayerRole } from '../types/auction';
 import { Shield, Target, Zap, Award, Sparkles, Users } from 'lucide-react';
-import { SocialFollowStrip } from './SocialFollowStrip';
 
 interface Player3DCardProps {
   name: string;
@@ -246,9 +245,6 @@ export function Player3DCard({
               Waiting for bidding to open...
             </div>
           )}
-
-          {/* SOCIAL MEDIA FOOTER STRIP IN AUCTION CARD */}
-          <SocialFollowStrip variant="dark" className={isProjectorMode ? 'mt-2' : 'mt-4'} />
         </div>
       </div>
     </div>
