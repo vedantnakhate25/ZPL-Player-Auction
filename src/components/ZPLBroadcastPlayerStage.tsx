@@ -5,7 +5,7 @@ import { Trophy, Shield, Target, Zap, Award, Sparkles, Check, X, Radio } from 'l
 
 interface ZPLBroadcastPlayerStageProps {
   auction: Auction;
-  auctionState: AuctionState;
+  auctionState?: AuctionState | null;
   teams: Team[];
   players?: Player[];
   isProjectorMode?: boolean;
@@ -40,7 +40,7 @@ function ZPLBroadcastPlayerStageComponent({
     ) || (auctionState?.winningTeamName ? {
       id: auctionState.winningTeamId || 'bid-team',
       name: auctionState.winningTeamName,
-      logoUrl: auctionState.winningTeamLogo,
+      logoUrl: auctionState.winningTeamLogo || '',
       purse: 1000,
       remainingPurse: 1000,
       purchasedPlayerCount: 0,
@@ -50,7 +50,7 @@ function ZPLBroadcastPlayerStageComponent({
     } as Team : null);
   }, [teams, auctionState?.winningTeamId, auctionState?.winningTeamName, auctionState?.winningTeamLogo, auction.id]);
 
-  const holdingTeamLogo = holdingTeam?.logoUrl || auctionState.winningTeamLogo || '';
+  const holdingTeamLogo = holdingTeam?.logoUrl || auctionState?.winningTeamLogo || '';
 
   // Total points spent across all teams (memoized)
   const totalPointsSpent = useMemo(() => {
@@ -224,7 +224,7 @@ function ZPLBroadcastPlayerStageComponent({
 
               {/* Status pill */}
               <div className="flex items-center gap-1">
-                {auctionState.status === 'paused' ? (
+                {auctionState?.status === 'paused' ? (
                   <span className="px-2.5 py-0.5 rounded-full bg-amber-400 text-black text-[10px] font-black uppercase tracking-wider animate-pulse flex items-center gap-1 shadow-sm">
                     <span className="w-1.5 h-1.5 rounded-full bg-black" />
                     PAUSED
@@ -260,7 +260,7 @@ function ZPLBroadcastPlayerStageComponent({
               <div className="flex items-center gap-2 mt-0.5 text-[10px] sm:text-[11px] text-cyan-300 font-bold uppercase tracking-wider">
                 <span>{organizationTitle}</span>
                 <span>&bull;</span>
-                <span>{auctionState.round === 'unsold' ? 'Unsold Round' : 'Regular Pool'}</span>
+                <span>{auctionState?.round === 'unsold' ? 'Unsold Round' : 'Regular Pool'}</span>
               </div>
             </div>
 
@@ -313,11 +313,11 @@ function ZPLBroadcastPlayerStageComponent({
                       {playerRole}
                     </span>
                     <span className="text-zinc-300 truncate px-1">
-                      {auctionState.round === 'unsold'
+                      {auctionState?.round === 'unsold'
                         ? 'Unsold'
-                        : auctionState.currentPlayerSlotName
+                        : auctionState?.currentPlayerSlotName
                         ? auctionState.currentPlayerSlotName
-                        : auctionState.currentPlayerSlotNumber
+                        : auctionState?.currentPlayerSlotNumber
                         ? `Slot ${auctionState.currentPlayerSlotNumber}`
                         : 'Slot 1'}
                     </span>
@@ -353,7 +353,7 @@ function ZPLBroadcastPlayerStageComponent({
                 </div>
 
                 {/* Highest Bidder Indicator (if any) */}
-                {auctionState.winningTeamName && (
+                {auctionState?.winningTeamName && (
                   <div className="px-2.5 py-1 rounded-xl bg-amber-500/10 border border-amber-500/40 flex items-center justify-between text-[11px]">
                     <span className="text-zinc-400 font-bold uppercase text-[9px]">
                       {isSold ? 'Sold To:' : 'Leading Bid:'}
@@ -388,7 +388,7 @@ function ZPLBroadcastPlayerStageComponent({
                           ? 'CURRENT HIGHEST BID'
                           : 'BASE PRICE'}
                       </span>
-                      {auctionState.winningTeamName && (
+                      {auctionState?.winningTeamName && (
                         <span className="text-[10px] font-bold text-amber-400 truncate block uppercase">
                           Team: {auctionState.winningTeamName}
                         </span>
@@ -607,7 +607,7 @@ function ZPLBroadcastPlayerStageComponent({
       <div className="relative px-3 sm:px-6 py-2 pb-3 w-full max-w-3xl mx-auto">
         <div className="rounded-full bg-white/95 text-black px-3.5 py-1.5 border border-zinc-300 shadow-xl flex items-center justify-center text-center">
           <p className="text-[11px] sm:text-xs font-bold text-zinc-900 leading-snug flex items-center justify-center flex-wrap gap-1.5">
-            {auctionState.status === 'paused' ? (
+            {auctionState?.status === 'paused' ? (
               <>
                 <span className="px-2 py-0.5 rounded-full bg-amber-500 text-black font-black text-[9px] uppercase tracking-wider shadow-xs animate-pulse">
                   AUCTION PAUSED
@@ -623,7 +623,7 @@ function ZPLBroadcastPlayerStageComponent({
                 </span>
                 <span>
                   <strong className="uppercase font-black text-black">{playerName}</strong> has been SOLD to{' '}
-                  <strong className="text-amber-800 uppercase font-black">{auctionState.winningTeamName}</strong>{' '}
+                  <strong className="text-amber-800 uppercase font-black">{auctionState?.winningTeamName || 'a Team'}</strong>{' '}
                   for {currentBid} PTS in the {tournamentTitle}.
                 </span>
               </>
@@ -643,7 +643,7 @@ function ZPLBroadcastPlayerStageComponent({
                 </span>
                 <span>
                   Current highest bid for <strong className="uppercase font-black text-black">{playerName}</strong> is {currentBid} PTS by{' '}
-                  <strong className="text-black uppercase font-black">{auctionState.winningTeamName}</strong>.
+                  <strong className="text-black uppercase font-black">{auctionState?.winningTeamName || 'Leading Team'}</strong>.
                 </span>
               </>
             ) : (

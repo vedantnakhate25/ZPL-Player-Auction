@@ -1,12 +1,10 @@
 import { useState, useEffect } from 'react';
-import { db, doc, onSnapshot } from './firebase';
+import { db, doc, collection, setDoc, deleteDoc, onSnapshot } from './firebase';
+import { safeStorage } from './storage';
 
 /**
- * Formats viewer counts cleanly according to the Indian numerical system (Lakh / Cr)
- * Examples:
- * 125000 -> "1.25 Lakh"
- * 45000 -> "45K"
- * 12000000 -> "1.2 Cr"
+ * Formats viewer counts cleanly according to the Indian numerical system (K, Lakh, Cr)
+ * Only formats when actual numbers grow large, with zero fake padding.
  */
 export function formatViewerCount(count: number): string {
   if (!count || count <= 0) return '1';
@@ -19,61 +17,95 @@ export function formatViewerCount(count: number): string {
   if (count >= 1000) {
     return `${(count / 1000).toFixed(1).replace(/\.?0+$/, '')}K`;
   }
-  return count.toLocaleString('en-IN');
+  return String(count);
 }
 
 /**
- * Tracks real-time active viewers for an auction at mega-scale (lakhs of viewers)
- * with zero database write bottlenecks and 60fps performance.
- *
- * Designed to handle 100,000+ to 10,00,000+ viewers without exceeding Firestore quotas
- * or freezing mobile devices.
+ * Tracks 100% REAL active live viewers for an auction.
+ * No fake counts, no artificial multipliers, no simulated fluctuations.
  *
  * @param auctionId The ID of the auction.
- * @param isViewer Whether the current client is a public viewer.
- * @returns The current number of active live viewers.
+ * @param isViewer Whether the current client is a public viewer (transmits heartbeats).
+ * @returns The exact number of real connected active viewers.
  */
 export function useLiveViewers(auctionId: string | undefined | null, isViewer: boolean = false) {
-  // Default realistic baseline for ZPL live broadcast (e.g., ~1.2 Lakh viewers)
-  const [baseViewerCount, setBaseViewerCount] = useState<number>(128450);
-  const [displayCount, setDisplayCount] = useState<number>(128450);
+  const [liveViewerCount, setLiveViewerCount] = useState<number>(1);
 
-  // 1. Single-document listen to auctionState for admin-controlled or recorded viewer numbers
+  // 1. Send heartbeat presence for this device if actively watching
   useEffect(() => {
-    if (!auctionId || typeof auctionId !== 'string') return;
+    if (!auctionId || !isViewer) return;
 
-    const unsub = onSnapshot(
-      doc(db, 'auctionState', auctionId),
-      (snap) => {
-        if (snap.exists()) {
-          const data = snap.data();
-          if (data && typeof data.viewerCount === 'number' && data.viewerCount > 0) {
-            setBaseViewerCount(data.viewerCount);
-            setDisplayCount(data.viewerCount);
+    let viewerId = safeStorage.getItem('zhep_viewer_session_id');
+    if (!viewerId) {
+      viewerId = 'viewer_' + Math.random().toString(36).substring(2, 11);
+      safeStorage.setItem('zhep_viewer_session_id', viewerId);
+    }
+
+    const viewerDocRef = doc(db, 'auctions', auctionId, 'viewers', viewerId);
+
+    // Initial heartbeat
+    const sendHeartbeat = () => {
+      if (document.visibilityState === 'hidden') return;
+      setDoc(viewerDocRef, { lastActive: Date.now() }, { merge: true }).catch(() => {});
+    };
+
+    sendHeartbeat();
+    const interval = setInterval(sendHeartbeat, 25000);
+
+    const handleBeforeUnload = () => {
+      deleteDoc(viewerDocRef).catch(() => {});
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        sendHeartbeat();
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      deleteDoc(viewerDocRef).catch(() => {});
+    };
+  }, [auctionId, isViewer]);
+
+  // 2. Real-time subscription to actual connected viewers in Firestore
+  useEffect(() => {
+    if (!auctionId) return;
+
+    const viewersColRef = collection(db, 'auctions', auctionId, 'viewers');
+
+    const unsubscribe = onSnapshot(
+      viewersColRef,
+      (snapshot) => {
+        const threshold = Date.now() - 60000; // Active within last 60 seconds
+        let realCount = 0;
+
+        snapshot.forEach((docSnap) => {
+          const data = docSnap.data();
+          if (data && typeof data.lastActive === 'number' && data.lastActive > threshold) {
+            realCount++;
           }
+        });
+
+        // If this client is a viewer, the real count must be at least 1
+        if (isViewer && realCount === 0) {
+          realCount = 1;
         }
+
+        setLiveViewerCount(Math.max(1, realCount));
       },
-      () => {
-        // Silently preserve current count on temporary network disconnects
+      (error) => {
+        console.warn('Real viewer presence subscription note:', error);
       }
     );
 
-    return () => unsub();
-  }, [auctionId]);
+    return () => unsubscribe();
+  }, [auctionId, isViewer]);
 
-  // 2. Realistic organic viewer fluctuation (simulates live audience wave like YouTube/Hotstar Live)
-  useEffect(() => {
-    const interval = setInterval(() => {
-      // Natural organic variance: +/- 0.5% to 1.5%
-      const variance = Math.floor((Math.random() - 0.48) * (baseViewerCount * 0.008));
-      setDisplayCount((prev) => {
-        const next = Math.max(1, prev + variance);
-        return next;
-      });
-    }, 7000);
-
-    return () => clearInterval(interval);
-  }, [baseViewerCount]);
-
-  return displayCount;
+  return liveViewerCount;
 }

@@ -44,14 +44,6 @@ function TeamPurseBoardComponent({
     };
   }, [selectedTeam]);
 
-  if (teams.length === 0) {
-    return (
-      <div className="rounded-2xl bg-zinc-950 border border-zinc-800 p-6 text-center text-zinc-400">
-        <p>No teams registered yet.</p>
-      </div>
-    );
-  }
-
   // Precompute team bought player count map with useMemo for O(1) lookups without render lag
   const teamBoughtCountMap = useMemo(() => {
     const map: Record<string, number> = {};
@@ -87,6 +79,14 @@ function TeamPurseBoardComponent({
       (a, b) => (b.soldPoints ?? b.basePoints) - (a.soldPoints ?? a.basePoints)
     );
   }, [selectedTeamPlayers]);
+
+  if (teams.length === 0) {
+    return (
+      <div className="rounded-2xl bg-zinc-950 border border-zinc-800 p-6 text-center text-zinc-400">
+        <p>No teams registered yet.</p>
+      </div>
+    );
+  }
 
   return (
     <div className="w-full space-y-3">

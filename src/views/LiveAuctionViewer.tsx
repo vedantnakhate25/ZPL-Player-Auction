@@ -738,7 +738,7 @@ export function LiveAuctionViewer({
                 <TeamPurseBoard
                   teams={teams}
                   players={players}
-                  activeWinningTeamId={auctionState.winningTeamId || undefined}
+                  activeWinningTeamId={auctionState?.winningTeamId || undefined}
                   isProjectorMode={false}
                 />
               </div>
