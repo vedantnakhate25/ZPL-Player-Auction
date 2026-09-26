@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import type { Auction, Team, PreAuctionPhoto } from '../types/auction';
 import {
@@ -19,7 +19,7 @@ interface PreAuctionSlideshowProps {
   isProjectorMode?: boolean;
 }
 
-export function PreAuctionSlideshow({
+function PreAuctionSlideshowComponent({
   auction,
   teams,
   isProjectorMode = false
@@ -137,15 +137,16 @@ export function PreAuctionSlideshow({
             : 'h-[520px] sm:h-[590px] md:h-[640px]'
         }`}
       >
-        {/* SLIDE WITH SMOOTH MOTION TRANSITION */}
+        {/* SLIDE WITH SMOOTH GPU-ACCELERATED TRANSITION */}
         {currentSlide && (
           <AnimatePresence mode="wait">
             <motion.div
               key={currentSlide.id + '-' + currentIndex}
-              initial={{ opacity: 0, scale: 0.97, filter: 'blur(4px)' }}
-              animate={{ opacity: 1, scale: 1, filter: 'blur(0px)' }}
-              exit={{ opacity: 0, scale: 1.02, filter: 'blur(4px)' }}
-              transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+              initial={{ opacity: 0, scale: 0.98 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 1.01 }}
+              transition={{ duration: 0.35, ease: 'easeOut' }}
+              style={{ willChange: 'opacity, transform' }}
               className={`absolute inset-0 flex flex-col items-center justify-between min-h-0 overflow-hidden ${
                 isProjectorMode ? 'p-2 sm:p-3 md:p-4' : 'p-4 sm:p-6 md:p-8'
               }`}
@@ -326,3 +327,5 @@ export function PreAuctionSlideshow({
     </div>
   );
 }
+
+export const PreAuctionSlideshow = React.memo(PreAuctionSlideshowComponent);

@@ -54,21 +54,30 @@ export default function App() {
     };
   }, []);
 
-  // 2. Read query parameters on initial mount
+  // 2. Read query parameters on initial mount & handle browser back/forward navigation
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const auctionParam = params.get('auction');
-    const adminParam = params.get('admin');
+    const handleUrlChange = () => {
+      const params = new URLSearchParams(window.location.search);
+      const auctionParam = params.get('auction');
+      const adminParam = params.get('admin');
 
-    if (auctionParam) {
-      setSelectedAuctionId(auctionParam);
-      setCurrentView('public-viewer');
-    } else if (adminParam === 'login') {
-      setCurrentView('admin-login');
-    } else if (adminParam === 'dashboard' || window.location.pathname.startsWith('/admin')) {
-      const isAuthed = safeStorage.getItem('zhep_admin_session') === 'authenticated';
-      setCurrentView(isAuthed ? 'admin-dashboard' : 'admin-login');
-    }
+      if (auctionParam) {
+        setSelectedAuctionId(auctionParam);
+        setCurrentView('public-viewer');
+      } else if (adminParam === 'login') {
+        setCurrentView('admin-login');
+      } else if (adminParam === 'dashboard' || window.location.pathname.startsWith('/admin')) {
+        const isAuthed = safeStorage.getItem('zhep_admin_session') === 'authenticated';
+        setCurrentView(isAuthed ? 'admin-dashboard' : 'admin-login');
+      } else {
+        setCurrentView('public-list');
+        setSelectedAuctionId('');
+      }
+    };
+
+    handleUrlChange();
+    window.addEventListener('popstate', handleUrlChange);
+    return () => window.removeEventListener('popstate', handleUrlChange);
   }, []);
 
   // Navigation handlers

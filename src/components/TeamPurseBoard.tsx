@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import type { Team, Player } from '../types/auction';
 import {
   Coins,
@@ -19,7 +19,7 @@ interface TeamPurseBoardProps {
   isProjectorMode?: boolean;
 }
 
-export function TeamPurseBoard({
+function TeamPurseBoardComponent({
   teams,
   players = [],
   activeWinningTeamId,
@@ -119,13 +119,15 @@ export function TeamPurseBoard({
         }`}
       >
         {teams.map((team) => {
-          const isWinning = team.id === activeWinningTeamId;
+          const isWinning = team && team.id === activeWinningTeamId;
+          const remainingPurse = typeof team?.remainingPurse === 'number' ? team.remainingPurse : (team?.purse || 0);
+          const totalPurse = typeof team?.purse === 'number' && team.purse > 0 ? team.purse : 1000;
           const pursePercent = Math.max(
             0,
-            Math.min(100, Math.round((team.remainingPurse / (team.purse || 1)) * 100))
-          );
+            Math.min(100, Math.round((remainingPurse / totalPurse) * 100))
+          ) || 0;
 
-          const teamNameKey = typeof team.name === 'string' ? team.name.trim().toLowerCase() : '';
+          const teamNameKey = typeof team?.name === 'string' ? team.name.trim().toLowerCase() : '';
           const teamBoughtCount = players.length > 0
             ? (teamBoughtCountMap[team.id] ?? (teamNameKey ? teamBoughtCountMap[teamNameKey] : 0) ?? 0)
             : (team.purchasedPlayerCount || 0);
@@ -185,12 +187,12 @@ export function TeamPurseBoard({
                         className={`font-black ${
                           isWinning
                             ? 'text-black'
-                            : team.remainingPurse < 150
+                            : remainingPurse < 150
                             ? 'text-rose-400'
                             : 'text-amber-400'
                         } ${isProjectorMode ? 'text-lg sm:text-xl' : 'text-base'}`}
                       >
-                        {team.remainingPurse}{' '}
+                        {remainingPurse}{' '}
                         <span className={`text-[10px] font-bold ${isWinning ? 'text-black/80' : 'text-zinc-400'}`}>
                           PTS
                         </span>
@@ -439,3 +441,5 @@ export function TeamPurseBoard({
     </div>
   );
 }
+
+export const TeamPurseBoard = React.memo(TeamPurseBoardComponent);

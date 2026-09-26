@@ -25,7 +25,7 @@ export const ZPLAuctionStageEmblem = memo(function ZPLAuctionStageEmblem({ class
         viewBox="0 0 600 600"
         width={size}
         height={size}
-        className="w-full max-w-[540px] h-auto drop-shadow-[0_0_35px_rgba(245,158,11,0.35)]"
+        className="w-full max-w-[540px] h-auto"
         xmlns="http://www.w3.org/2000/svg"
       >
         <defs>

@@ -21,7 +21,7 @@ export function PublicAuctionList({
     // Fail-safe timer in case snapshot query is slow
     const timer = setTimeout(() => {
       setLoading(false);
-    }, 1000);
+    }, 6000);
 
     const unsub = onSnapshot(
       collection(db, 'auctions'),

@@ -14,7 +14,7 @@ import {
 import type { Auction, AuctionState, Team, Player, PlayerRole } from '../types/auction';
 import { CelebrationConfetti } from '../components/CelebrationConfetti';
 import { AdminPreAuctionPhotoManager } from '../components/AdminPreAuctionPhotoManager';
-import { useLiveViewers } from '../lib/useLiveViewers';
+import { useLiveViewers, formatViewerCount } from '../lib/useLiveViewers';
 import {
   Play,
   Pause,
@@ -606,7 +606,7 @@ export function AdminLiveAuctionControl({
             </span>
             <Eye className="w-4 h-4 text-emerald-400" />
             <span className="text-xs sm:text-sm font-black text-white">
-              {liveViewerCount} <span className="font-bold text-zinc-400 hidden sm:inline">Live Viewer{liveViewerCount === 1 ? '' : 's'} Watching</span>
+              {formatViewerCount(liveViewerCount)} <span className="font-bold text-zinc-400 hidden sm:inline">Watching Live</span>
             </span>
           </div>
 

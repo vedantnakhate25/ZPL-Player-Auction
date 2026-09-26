@@ -17,7 +17,7 @@ import {
 import type { Auction, Team } from '../types/auction';
 import { createSampleAuction } from '../lib/sampleData';
 import { AdminPreAuctionPhotoManager } from '../components/AdminPreAuctionPhotoManager';
-import { useLiveViewers } from '../lib/useLiveViewers';
+import { useLiveViewers, formatViewerCount } from '../lib/useLiveViewers';
 import {
   Plus,
   Play,
@@ -58,7 +58,7 @@ function AuctionLiveViewerTag({ auctionId }: { auctionId: string }) {
         <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
       </span>
       <Eye className="w-3.5 h-3.5 text-emerald-400" />
-      <span>{count} watching live</span>
+      <span>{formatViewerCount(count)} watching live</span>
     </span>
   );
 }

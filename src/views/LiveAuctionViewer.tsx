@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { onSnapshot, doc, collection, query, where, db, handleFirestoreError, OperationType } from '../lib/firebase';
+import { onSnapshot, doc, collection, query, where, db } from '../lib/firebase';
 import type { Auction, AuctionState, Team, Player } from '../types/auction';
 import { Player3DCard } from '../components/Player3DCard';
 import { TeamPurseBoard } from '../components/TeamPurseBoard';
@@ -23,11 +23,32 @@ import {
   Eye,
   ArrowLeft
 } from 'lucide-react';
-import { useLiveViewers } from '../lib/useLiveViewers';
+import { useLiveViewers, formatViewerCount } from '../lib/useLiveViewers';
 
 interface LiveAuctionViewerProps {
   auctionId: string;
   onNavigateHome?: () => void;
+}
+
+// Global singleton AudioContext to prevent memory/hardware leaks across thousands of bids
+let globalAudioCtx: AudioContext | null = null;
+function getSharedAudioContext(): AudioContext | null {
+  if (typeof window === 'undefined') return null;
+  const AudioContextClass =
+    window.AudioContext ||
+    (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+  if (!AudioContextClass) return null;
+  if (!globalAudioCtx || globalAudioCtx.state === 'closed') {
+    try {
+      globalAudioCtx = new AudioContextClass();
+    } catch {
+      return null;
+    }
+  }
+  if (globalAudioCtx.state === 'suspended') {
+    globalAudioCtx.resume().catch(() => {});
+  }
+  return globalAudioCtx;
 }
 
 export function LiveAuctionViewer({
@@ -38,7 +59,9 @@ export function LiveAuctionViewer({
   const [auctionState, setAuctionState] = useState<AuctionState | null>(null);
   const [teams, setTeams] = useState<Team[]>([]);
   const [players, setPlayers] = useState<Player[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [isConnecting, setIsConnecting] = useState(true);
+  const [isNotFoundConfirmed, setIsNotFoundConfirmed] = useState(false);
+  const [connectionSlow, setConnectionSlow] = useState(false);
   const [isProjectorMode, setIsProjectorMode] = useState(false);
   const [showCelebration, setShowCelebration] = useState(false);
   const [soundEnabled, setSoundEnabled] = useState(true);
@@ -48,13 +71,27 @@ export function LiveAuctionViewer({
   // Real-time live viewer counter and heartbeat beacon
   const liveViewerCount = useLiveViewers(auctionId, true);
 
+  // Summary counts (memoized for instantaneous 60fps rendering without re-calculation lag)
+  const totalPlayers = players.length;
+  const { soldCount, unsoldCount, upcomingCount } = useMemo(() => {
+    let sold = 0;
+    let unsold = 0;
+    let upcoming = 0;
+    for (let i = 0; i < players.length; i++) {
+      const st = players[i]?.status;
+      if (st === 'sold') sold++;
+      else if (st === 'unsold') unsold++;
+      else if (st === 'upcoming') upcoming++;
+    }
+    return { soldCount: sold, unsoldCount: unsold, upcomingCount: upcoming };
+  }, [players]);
+
   // Sound beep / celebration chime (Web Audio API - clean, self-contained, no external mp3 files)
   const playSoundEffect = (type: 'sold' | 'unsold' | 'bid') => {
     if (!soundEnabled) return;
     try {
-      const AudioContextClass = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
-      if (!AudioContextClass) return;
-      const ctx = new AudioContextClass();
+      const ctx = getSharedAudioContext();
+      if (!ctx) return;
 
       if (type === 'sold') {
         // High celebratory fan-fare chord
@@ -92,38 +129,49 @@ export function LiveAuctionViewer({
 
   // 1. Real-time Subscription to Auction Doc
   useEffect(() => {
-    if (!auctionId) return;
+    if (!auctionId || typeof auctionId !== 'string') {
+      setIsConnecting(false);
+      setIsNotFoundConfirmed(true);
+      return;
+    }
 
-    // Fail-safe timer to prevent loading hang
-    const timer = setTimeout(() => {
-      setLoading(false);
-    }, 1000);
+    setIsConnecting(true);
+    setIsNotFoundConfirmed(false);
+    setConnectionSlow(false);
+
+    // After 6s, show helpful reconnection helper without declaring premature failure
+    const slowTimer = setTimeout(() => {
+      setConnectionSlow(true);
+    }, 6000);
 
     const unsubAuction = onSnapshot(
       doc(db, 'auctions', auctionId),
       (snap) => {
         if (snap.exists()) {
           setAuction({ id: snap.id, ...snap.data() } as Auction);
+          setIsNotFoundConfirmed(false);
         } else {
           setAuction(null);
+          setIsNotFoundConfirmed(true);
         }
-        setLoading(false);
+        setIsConnecting(false);
       },
       (error) => {
         console.warn('Auction live subscription notice:', error);
-        setLoading(false);
+        // On network retry, do not mark as not found
+        setIsConnecting(false);
       }
     );
 
     return () => {
-      clearTimeout(timer);
+      clearTimeout(slowTimer);
       unsubAuction();
     };
   }, [auctionId]);
 
   // 2. Real-time Subscription to AuctionState Doc
   useEffect(() => {
-    if (!auctionId) return;
+    if (!auctionId || typeof auctionId !== 'string') return;
     const unsubState = onSnapshot(
       doc(db, 'auctionState', auctionId),
       (snap) => {
@@ -151,7 +199,7 @@ export function LiveAuctionViewer({
 
   // 3. Real-time Subscription to Teams
   useEffect(() => {
-    if (!auctionId) return;
+    if (!auctionId || typeof auctionId !== 'string') return;
     const teamsQuery = query(collection(db, 'teams'), where('auctionId', '==', auctionId));
     const unsubTeams = onSnapshot(
       teamsQuery,
@@ -163,11 +211,9 @@ export function LiveAuctionViewer({
         // Sort alphabetically or by remaining purse
         teamList.sort((a, b) => b.remainingPurse - a.remainingPurse);
         setTeams(teamList);
-        setLoading(false);
       },
       (error) => {
         console.warn('Teams live viewer notice:', error);
-        setLoading(false);
       }
     );
 
@@ -176,7 +222,7 @@ export function LiveAuctionViewer({
 
   // 4. Real-time Subscription to Players
   useEffect(() => {
-    if (!auctionId) return;
+    if (!auctionId || typeof auctionId !== 'string') return;
     const playersQuery = query(collection(db, 'players'), where('auctionId', '==', auctionId));
     const unsubPlayers = onSnapshot(
       playersQuery,
@@ -208,26 +254,61 @@ export function LiveAuctionViewer({
     }
   };
 
-  const copyViewerLink = () => {
+  const copyViewerLink = async () => {
     const url = window.location.origin + '?auction=' + auctionId;
-    navigator.clipboard.writeText(url).then(() => {
-      setCopiedLink(true);
-      setTimeout(() => setCopiedLink(false), 2000);
-    });
+    if (typeof navigator !== 'undefined' && navigator.share) {
+      try {
+        await navigator.share({
+          title: auction ? `${auction.name} - Live Cricket Auction` : 'ZPL Live Cricket Auction',
+          text: `Watch the official live player auction stream for ${auction?.name || 'ZPL'}!`,
+          url: url,
+        });
+        return;
+      } catch {
+        // User cancelled share or device dismissed dialog; fallback to clipboard
+      }
+    }
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(url).then(() => {
+        setCopiedLink(true);
+        setTimeout(() => setCopiedLink(false), 2000);
+      });
+    }
   };
 
-  if (loading && !auction) {
+  if (isConnecting && !auction) {
     return (
-      <div className="min-h-screen bg-black flex flex-col items-center justify-center text-white p-6">
+      <div className="min-h-screen bg-black flex flex-col items-center justify-center text-white p-6 text-center">
         <div className="w-12 h-12 border-4 border-amber-500 border-t-transparent rounded-full animate-spin mb-4" />
-        <p className="text-zinc-300 text-lg font-semibold tracking-wide">
+        <h3 className="text-xl font-black text-white tracking-wide">
           Connecting to Live Auction Stream...
+        </h3>
+        <p className="text-zinc-400 text-xs sm:text-sm mt-1 max-w-sm mx-auto">
+          Synchronizing real-time bids, team purses, and player stage.
         </p>
+        {connectionSlow && (
+          <div className="mt-5 flex flex-col sm:flex-row items-center justify-center gap-2">
+            <button
+              onClick={() => window.location.reload()}
+              className="px-4 py-2 rounded-xl bg-amber-400 hover:bg-amber-300 text-black text-xs font-black shadow-md cursor-pointer transition-all active:scale-95"
+            >
+              Refresh Stream
+            </button>
+            {onNavigateHome && (
+              <button
+                onClick={onNavigateHome}
+                className="px-4 py-2 rounded-xl bg-zinc-900 border border-zinc-800 text-zinc-300 text-xs font-bold hover:text-white cursor-pointer"
+              >
+                Back to Auctions
+              </button>
+            )}
+          </div>
+        )}
       </div>
     );
   }
 
-  if (!auction) {
+  if (!auction && isNotFoundConfirmed) {
     return (
       <div className="min-h-screen bg-black flex flex-col items-center justify-center text-white p-6 text-center">
         <AlertTriangle className="w-16 h-16 text-amber-400 mb-4" />
@@ -247,20 +328,33 @@ export function LiveAuctionViewer({
     );
   }
 
-  // Summary counts (memoized for instantaneous 60fps rendering without re-calculation lag)
-  const totalPlayers = players.length;
-  const { soldCount, unsoldCount, upcomingCount } = useMemo(() => {
-    let sold = 0;
-    let unsold = 0;
-    let upcoming = 0;
-    for (let i = 0; i < players.length; i++) {
-      const st = players[i].status;
-      if (st === 'sold') sold++;
-      else if (st === 'unsold') unsold++;
-      else if (st === 'upcoming') upcoming++;
-    }
-    return { soldCount: sold, unsoldCount: unsold, upcomingCount: upcoming };
-  }, [players]);
+  if (!auction) {
+    return (
+      <div className="min-h-screen bg-black flex flex-col items-center justify-center text-white p-6 text-center">
+        <div className="w-12 h-12 border-4 border-amber-500 border-t-transparent rounded-full animate-spin mb-4" />
+        <h3 className="text-xl font-black text-white">Reconnecting to Auction...</h3>
+        <p className="text-zinc-400 text-xs sm:text-sm mt-1 mb-5">
+          Live stream connection interrupted. Attempting to restore...
+        </p>
+        <div className="flex items-center justify-center gap-2">
+          <button
+            onClick={() => window.location.reload()}
+            className="px-5 py-2 rounded-xl bg-amber-400 text-black font-black text-xs cursor-pointer shadow-md hover:bg-amber-300"
+          >
+            Retry Connection
+          </button>
+          {onNavigateHome && (
+            <button
+              onClick={onNavigateHome}
+              className="px-4 py-2 rounded-xl bg-zinc-900 border border-zinc-800 text-zinc-300 text-xs font-bold hover:text-white cursor-pointer"
+            >
+              Back to Home
+            </button>
+          )}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div
@@ -394,7 +488,7 @@ export function LiveAuctionViewer({
               </span>
               <Eye className="w-3.5 h-3.5 text-emerald-400" />
               <span className="text-[11px] font-black">
-                {liveViewerCount} <span className="font-semibold text-zinc-400">watching</span>
+                {formatViewerCount(liveViewerCount)} <span className="font-semibold text-zinc-400">watching</span>
               </span>
             </div>
           </div>
@@ -631,7 +725,7 @@ export function LiveAuctionViewer({
           )
         ) : (
           /* LIVE BROADCAST ARENA STAGE (MATCHING OFFICIAL TV AUCTION BROADCAST) */
-          <div className="w-full flex-1 flex flex-col justify-center min-h-0 py-1">
+          <div className="w-full flex-1 flex flex-col justify-center min-h-0 py-1 space-y-6">
             <ZPLBroadcastPlayerStage
               auction={auction}
               auctionState={auctionState}
@@ -639,6 +733,16 @@ export function LiveAuctionViewer({
               players={players}
               isProjectorMode={isProjectorMode}
             />
+            {!isProjectorMode && (
+              <div className="rounded-3xl bg-zinc-950 border border-zinc-800 p-4 sm:p-6 backdrop-blur-md shadow-xl">
+                <TeamPurseBoard
+                  teams={teams}
+                  players={players}
+                  activeWinningTeamId={auctionState.winningTeamId || undefined}
+                  isProjectorMode={false}
+                />
+              </div>
+            )}
           </div>
         )}
       </main>

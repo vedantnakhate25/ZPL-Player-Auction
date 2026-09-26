@@ -1,6 +1,6 @@
 import React from 'react';
 import { ZPLAuctionStageEmblem } from './ZPLAuctionStageEmblem';
-import { Radio, Shield, Sparkles, Trophy } from 'lucide-react';
+import { Shield, Sparkles, Trophy } from 'lucide-react';
 import type { Auction } from '../types/auction';
 
 interface ZPLAuctionStageHeroProps {
@@ -14,7 +14,10 @@ export function ZPLAuctionStageHero({
   onSelectAuction,
   onNavigateAdmin,
 }: ZPLAuctionStageHeroProps) {
-  const liveAuction = auctions.find((a) => a.status === 'live');
+  const activeAuction =
+    auctions.find((a) => a.status === 'live') ||
+    auctions.find((a) => a.status === 'paused') ||
+    auctions[0];
 
   return (
     <div className="relative w-full rounded-3xl overflow-hidden border border-amber-500/40 bg-black text-white shadow-2xl shadow-black/90">
@@ -46,19 +49,9 @@ export function ZPLAuctionStageHero({
         </div>
 
         <div className="flex items-center gap-2">
-          {liveAuction && (
-            <button
-              onClick={() => onSelectAuction && onSelectAuction(liveAuction.id)}
-              className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-red-600 hover:bg-red-500 text-white text-xs font-black uppercase tracking-wider animate-pulse shadow-md transition-all cursor-pointer"
-              title="Click to view live auction"
-            >
-              <Radio className="w-3.5 h-3.5" />
-              <span>Auction Live Now</span>
-            </button>
-          )}
           <button
             onClick={onNavigateAdmin}
-            className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-zinc-900 hover:bg-zinc-800 border border-amber-500/40 text-xs font-bold text-amber-300 hover:text-amber-200 transition-colors shadow-xs cursor-pointer"
+            className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-zinc-900 hover:bg-zinc-800 border border-amber-500/40 text-xs font-bold text-amber-300 hover:text-amber-200 transition-colors shadow-xs cursor-pointer active:scale-95"
           >
             <Shield className="w-3.5 h-3.5 text-amber-400" />
             <span>Admin Desk</span>
@@ -69,7 +62,13 @@ export function ZPLAuctionStageHero({
       {/* 2. MAIN STAGE PODIUM VIEW */}
       <div className="relative px-4 sm:px-8 pt-8 pb-12 sm:pb-16 flex flex-col items-center justify-center text-center">
         {/* The Grand Glowing ZPL Emblem */}
-        <div className="relative my-2 sm:my-4 transition-transform duration-500 hover:scale-102">
+        <div
+          onClick={() => activeAuction && onSelectAuction && onSelectAuction(activeAuction.id)}
+          className={`relative my-2 sm:my-4 transition-transform duration-500 hover:scale-102 ${
+            activeAuction ? 'cursor-pointer active:scale-98' : ''
+          }`}
+          title={activeAuction ? `Watch ${activeAuction.name}` : undefined}
+        >
           <ZPLAuctionStageEmblem size={480} />
         </div>
 
@@ -82,7 +81,12 @@ export function ZPLAuctionStageHero({
           </div>
 
           {/* Main Title */}
-          <h2 className="text-2xl sm:text-4xl md:text-5xl font-black text-white tracking-tight drop-shadow-[0_4px_16px_rgba(0,0,0,0.9)] leading-tight pb-2">
+          <h2
+            onClick={() => activeAuction && onSelectAuction && onSelectAuction(activeAuction.id)}
+            className={`text-2xl sm:text-4xl md:text-5xl font-black text-white tracking-tight drop-shadow-[0_4px_16px_rgba(0,0,0,0.9)] leading-tight pb-2 ${
+              activeAuction ? 'cursor-pointer hover:text-amber-400 transition-colors' : ''
+            }`}
+          >
             ZPL 2027 Player Auction
           </h2>
         </div>

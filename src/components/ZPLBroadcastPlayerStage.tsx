@@ -11,7 +11,7 @@ interface ZPLBroadcastPlayerStageProps {
   isProjectorMode?: boolean;
 }
 
-export function ZPLBroadcastPlayerStage({
+function ZPLBroadcastPlayerStageComponent({
   auction,
   auctionState,
   teams,
@@ -88,7 +88,7 @@ export function ZPLBroadcastPlayerStage({
         <div className="relative w-full max-w-4xl flex items-center justify-center py-2">
           {/* Stepped Geometric Double-Line Arch with Mathematically Locked Typography */}
           <svg
-            className="w-full h-auto max-h-32 sm:max-h-36 drop-shadow-[0_0_16px_rgba(251,191,36,0.35)]"
+            className="w-full h-auto max-h-32 sm:max-h-36"
             viewBox="0 0 1000 135"
             fill="none"
             xmlns="http://www.w3.org/2000/svg"
@@ -666,3 +666,5 @@ export function ZPLBroadcastPlayerStage({
     </div>
   );
 }
+
+export const ZPLBroadcastPlayerStage = React.memo(ZPLBroadcastPlayerStageComponent);
