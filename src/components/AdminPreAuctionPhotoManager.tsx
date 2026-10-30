@@ -302,24 +302,24 @@ export function AdminPreAuctionPhotoManager({
       onClick={onClose}
     >
       <div
-        className="relative w-full max-w-2xl max-h-[92vh] bg-zinc-950 border border-zinc-800 rounded-3xl shadow-2xl overflow-hidden flex flex-col text-white"
+        className="relative w-full max-w-2xl max-h-[92vh] bg-[#0a1526] border border-[#f5d77f]/30 rounded-3xl shadow-2xl overflow-hidden flex flex-col text-white"
         onClick={(e) => e.stopPropagation()}
       >
         {/* HEADER */}
-        <div className="p-5 sm:p-6 bg-gradient-to-r from-black via-zinc-950 to-black border-b border-zinc-800 flex items-center justify-between gap-4">
+        <div className="p-5 sm:p-6 bg-gradient-to-r from-[#060c16] via-[#0a1526] to-[#060c16] border-b border-[#f5d77f]/20 flex items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <div className="p-2.5 rounded-2xl bg-black border border-amber-500/30 shadow-md text-amber-400">
-              <Trophy className="w-7 h-7 drop-shadow-[0_0_8px_rgba(245,158,11,0.5)]" />
+            <div className="p-2.5 rounded-2xl bg-[#060c16] border border-[#f5d77f]/40 shadow-md text-[#f5d77f]">
+              <Trophy className="w-7 h-7 drop-shadow-[0_0_8px_rgba(245,215,127,0.5)]" />
             </div>
             <div>
-              <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-amber-400 text-black text-[10px] font-black uppercase tracking-wider">
+              <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#f5d77f] text-[#060c16] text-[10px] font-black uppercase tracking-wider">
                 <Clock className="w-3 h-3" />
                 <span>5-6 Sec Rotation</span>
               </div>
-              <h3 className="text-xl sm:text-2xl font-black text-white mt-0.5">
+              <h3 className="text-xl sm:text-2xl font-black text-white mt-0.5 font-heading">
                 Pre-Auction Slideshow Photos
               </h3>
-              <p className="text-xs text-zinc-400 font-medium">
+              <p className="text-xs text-[#fff4c2]/70 font-medium">
                 Visible to viewers continuously until the live auction starts
               </p>
             </div>
@@ -327,7 +327,7 @@ export function AdminPreAuctionPhotoManager({
 
           <button
             onClick={onClose}
-            className="p-2 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-zinc-300 hover:text-white border border-zinc-700 transition-colors cursor-pointer"
+            className="p-2 rounded-xl bg-[#060c16] hover:bg-[#0f1d33] text-[#fff4c2] hover:text-white border border-[#f5d77f]/30 transition-colors cursor-pointer"
             aria-label="Close dialog"
           >
             <X className="w-5 h-5" />

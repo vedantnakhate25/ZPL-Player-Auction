@@ -94,26 +94,33 @@ export function AdminCreateAuction({
   };
 
   return (
-    <div className="min-h-screen bg-black text-white p-4 sm:p-6 lg:p-8 flex items-center justify-center selection:bg-amber-400 selection:text-black">
+    <div className="min-h-screen bg-[#060c16] text-white p-4 sm:p-6 lg:p-8 flex items-center justify-center selection:bg-[#f5d77f] selection:text-[#060c16]">
       <div className="w-full max-w-xl">
         <div className="mb-6 flex items-center gap-3">
           <button
             onClick={onCancel}
-            className="p-2.5 rounded-xl bg-zinc-950 border border-amber-500/30 hover:bg-zinc-900 text-amber-400 hover:text-amber-200 transition-colors cursor-pointer"
+            className="p-2.5 rounded-xl bg-[#0a1526] border border-[#f5d77f]/30 hover:bg-[#0e1f38] text-[#f5d77f] hover:text-[#fff4c2] transition-colors cursor-pointer"
           >
             <ChevronLeft className="w-5 h-5" />
           </button>
+          <div className="w-12 h-12 rounded-full bg-[#081220] border-2 border-[#f5d77f]/60 p-0.5 flex items-center justify-center shadow-lg ring-1 ring-[#f5d77f]/30 shrink-0 overflow-hidden">
+            <img
+              src="/assets/aistudio/file_00000000661882118ee895643705c2c1_2d4830dd.png"
+              alt="ZPL Official Tournament Crest"
+              className="w-full h-full object-contain filter contrast-105"
+            />
+          </div>
           <div>
             <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
               Create New Cricket Auction
             </h1>
-            <p className="text-zinc-400 text-xs sm:text-sm">
+            <p className="text-[#a1b3cb] text-xs sm:text-sm">
               Configure auction schedule and starting parameters.
             </p>
           </div>
         </div>
 
-        <div className="rounded-3xl bg-zinc-950 border border-zinc-800 p-6 sm:p-8 shadow-2xl space-y-6">
+        <div className="rounded-3xl bg-[#0a1526] border border-[#f5d77f]/25 p-6 sm:p-8 shadow-2xl space-y-6">
           {error && (
             <div className="p-3.5 rounded-xl bg-red-950/80 border border-red-500/50 text-red-200 text-xs flex items-center gap-2">
               <AlertCircle className="w-4 h-4 text-red-400 shrink-0" />
@@ -123,7 +130,7 @@ export function AdminCreateAuction({
 
           <form onSubmit={handleSubmit} className="space-y-6">
             <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-zinc-300 mb-1.5">
+              <label className="block text-xs font-bold uppercase tracking-wider text-[#c5d3e8] mb-1.5">
                 Auction Name:
               </label>
               <input
@@ -132,39 +139,39 @@ export function AdminCreateAuction({
                 onChange={(e) => setName(e.target.value)}
                 placeholder="e.g. ZPL 2027 - Zhep Premier League Player Auction"
                 required
-                className="w-full px-4 py-2.5 rounded-xl bg-black border border-zinc-800 text-white placeholder-zinc-500 focus:outline-none focus:border-amber-400 focus:ring-1 focus:ring-amber-400 text-sm"
+                className="w-full px-4 py-2.5 rounded-xl bg-[#060c16] border border-[#13243f] text-white placeholder-[#60738e] focus:outline-none focus:border-[#f5d77f] focus:ring-1 focus:ring-[#f5d77f] text-sm"
               />
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-zinc-300 mb-1.5">
+                <label className="block text-xs font-bold uppercase tracking-wider text-[#c5d3e8] mb-1.5">
                   Auction Date:
                 </label>
                 <div className="relative">
-                  <Calendar className="w-4 h-4 text-amber-400 absolute left-3.5 top-3" />
+                  <Calendar className="w-4 h-4 text-[#f5d77f] absolute left-3.5 top-3" />
                   <input
                     type="date"
                     value={date}
                     onChange={(e) => setDate(e.target.value)}
                     required
-                    className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-black border border-zinc-800 text-white focus:outline-none focus:border-amber-400 focus:ring-1 focus:ring-amber-400 text-sm"
+                    className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-[#060c16] border border-[#13243f] text-white focus:outline-none focus:border-[#f5d77f] focus:ring-1 focus:ring-[#f5d77f] text-sm"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-zinc-300 mb-1.5">
+                <label className="block text-xs font-bold uppercase tracking-wider text-[#c5d3e8] mb-1.5">
                   Auction Time:
                 </label>
                 <div className="relative">
-                  <Clock className="w-4 h-4 text-amber-400 absolute left-3.5 top-3" />
+                  <Clock className="w-4 h-4 text-[#f5d77f] absolute left-3.5 top-3" />
                   <input
                     type="time"
                     value={time}
                     onChange={(e) => setTime(e.target.value)}
                     required
-                    className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-black border border-zinc-800 text-white focus:outline-none focus:border-amber-400 focus:ring-1 focus:ring-amber-400 text-sm"
+                    className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-[#060c16] border border-[#13243f] text-white focus:outline-none focus:border-[#f5d77f] focus:ring-1 focus:ring-[#f5d77f] text-sm"
                   />
                 </div>
               </div>
@@ -172,7 +179,7 @@ export function AdminCreateAuction({
 
             {/* TWO OPTIONS: START IMMEDIATELY OR SCHEDULE */}
             <div className="space-y-2">
-              <label className="block text-xs font-bold uppercase tracking-wider text-zinc-300">
+              <label className="block text-xs font-bold uppercase tracking-wider text-[#c5d3e8]">
                 Launch Option:
               </label>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -181,21 +188,21 @@ export function AdminCreateAuction({
                   onClick={() => setMode('immediate')}
                   className={`p-4 rounded-xl border text-left flex flex-col gap-1 transition-all cursor-pointer ${
                     mode === 'immediate'
-                      ? 'bg-amber-500/15 border-amber-400 ring-2 ring-amber-400/40 text-white'
-                      : 'bg-black border-zinc-800 text-zinc-400 hover:border-zinc-700'
+                      ? 'bg-[#f5d77f]/15 border-[#f5d77f] ring-2 ring-[#f5d77f]/40 text-white'
+                      : 'bg-[#060c16] border-[#13243f] text-[#a1b3cb] hover:border-[#f5d77f]/40'
                   }`}
                 >
                   <div className="flex items-center gap-2">
                     <Play
                       className={`w-4 h-4 ${
-                        mode === 'immediate' ? 'text-amber-400' : 'text-zinc-500'
+                        mode === 'immediate' ? 'text-[#f5d77f]' : 'text-[#60738e]'
                       }`}
                     />
                     <span className="font-black text-sm uppercase">
                       Start Immediately
                     </span>
                   </div>
-                  <span className="text-xs text-zinc-400">
+                  <span className="text-xs text-[#a1b3cb]">
                     Live broadcast begins immediately upon team & player setup.
                   </span>
                 </button>
@@ -205,39 +212,39 @@ export function AdminCreateAuction({
                   onClick={() => setMode('schedule')}
                   className={`p-4 rounded-xl border text-left flex flex-col gap-1 transition-all cursor-pointer ${
                     mode === 'schedule'
-                      ? 'bg-amber-500/15 border-amber-400 ring-2 ring-amber-400/40 text-white'
-                      : 'bg-black border-zinc-800 text-zinc-400 hover:border-zinc-700'
+                      ? 'bg-[#f5d77f]/15 border-[#f5d77f] ring-2 ring-[#f5d77f]/40 text-white'
+                      : 'bg-[#060c16] border-[#13243f] text-[#a1b3cb] hover:border-[#f5d77f]/40'
                   }`}
                 >
                   <div className="flex items-center gap-2">
                     <CalendarCheck
                       className={`w-4 h-4 ${
-                        mode === 'schedule' ? 'text-amber-400' : 'text-zinc-500'
+                        mode === 'schedule' ? 'text-[#f5d77f]' : 'text-[#60738e]'
                       }`}
                     />
                     <span className="font-black text-sm uppercase">
                       Schedule Auction
                     </span>
                   </div>
-                  <span className="text-xs text-zinc-400">
+                  <span className="text-xs text-[#a1b3cb]">
                     Set countdown date/time. Admin can also manually start early.
                   </span>
                 </button>
               </div>
             </div>
 
-            <div className="pt-4 flex items-center justify-end gap-3 border-t border-zinc-800">
+            <div className="pt-4 flex items-center justify-end gap-3 border-t border-[#13243f]">
               <button
                 type="button"
                 onClick={onCancel}
-                className="px-5 py-2.5 rounded-xl bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 text-zinc-300 font-bold text-sm cursor-pointer"
+                className="px-5 py-2.5 rounded-xl bg-[#0e1f38] hover:bg-[#132948] border border-[#1b3459] text-[#c5d3e8] font-bold text-sm cursor-pointer"
               >
                 Cancel
               </button>
               <button
                 type="submit"
                 disabled={loading}
-                className="px-7 py-2.5 rounded-xl bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-black font-black text-sm transition-all shadow-lg shadow-amber-500/20 disabled:opacity-50 cursor-pointer active:scale-98"
+                className="px-7 py-2.5 rounded-xl bg-gradient-to-r from-[#fae29c] via-[#f5d77f] to-[#e0bc50] hover:from-[#fff0b8] hover:to-[#ebc860] text-[#060c16] font-black text-sm transition-all shadow-lg shadow-amber-900/30 disabled:opacity-50 cursor-pointer active:scale-98"
               >
                 {loading ? 'Creating...' : 'Create Auction'}
               </button>

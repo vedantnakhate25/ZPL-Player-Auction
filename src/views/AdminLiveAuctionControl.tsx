@@ -608,8 +608,8 @@ export function AdminLiveAuctionControl({
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-black flex items-center justify-center text-white">
-        <div className="w-10 h-10 border-4 border-amber-400 border-t-transparent rounded-full animate-spin" />
+      <div className="min-h-screen bg-[#060c16] flex items-center justify-center text-white">
+        <div className="w-10 h-10 border-4 border-[#f5d77f] border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
@@ -619,22 +619,30 @@ export function AdminLiveAuctionControl({
   const currentLiveBidPoints = auctionState?.currentBidPoints || bidPoints || currentPlayer?.basePoints || 50;
 
   return (
-    <div className="min-h-screen bg-black text-white p-4 sm:p-6 lg:p-8 selection:bg-amber-400 selection:text-black">
+    <div className="min-h-screen bg-[#060c16] text-white p-4 sm:p-6 lg:p-8 selection:bg-[#f5d77f] selection:text-[#060c16]">
       <CelebrationConfetti active={showCelebration} />
       <PlayerDecisionPopup auctionState={auctionState} teams={teams} />
 
       {/* TOP HEADER */}
-      <div className="max-w-7xl mx-auto flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-zinc-800">
+      <div className="max-w-7xl mx-auto flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-[#13243f]">
         <div className="flex items-center gap-3">
           <button
             onClick={onBack}
-            className="p-2 rounded-2xl bg-zinc-950 border border-zinc-800 hover:bg-zinc-800 text-zinc-200 hover:text-white transition-colors cursor-pointer"
+            className="p-2.5 rounded-2xl bg-[#0a1526] border border-[#13243f] hover:bg-[#0e1f38] text-[#c5d3e8] hover:text-white transition-colors cursor-pointer"
           >
             <ChevronLeft className="w-5 h-5" />
           </button>
+          {/* Official ZPL Tournament Crest Logo */}
+          <div className="w-12 h-12 rounded-full bg-[#081220] border-2 border-[#f5d77f]/60 p-0.5 flex items-center justify-center shadow-lg ring-1 ring-[#f5d77f]/30 shrink-0 overflow-hidden">
+            <img
+              src="/assets/aistudio/file_00000000661882118ee895643705c2c1_2d4830dd.png"
+              alt="ZPL Official Logo"
+              className="w-full h-full object-contain filter contrast-105"
+            />
+          </div>
           <div>
             <div className="flex items-center gap-2">
-              <span className="px-2.5 py-0.5 rounded-full bg-zinc-950 text-amber-400 border border-amber-500/30 text-xs font-black uppercase tracking-wider shadow-sm">
+              <span className="px-2.5 py-0.5 rounded-full bg-[#0a1526] text-[#f5d77f] border border-[#f5d77f]/30 text-xs font-black uppercase tracking-wider shadow-sm">
                 Admin Control Room
               </span>
               {auctionState?.round === 'unsold' && (

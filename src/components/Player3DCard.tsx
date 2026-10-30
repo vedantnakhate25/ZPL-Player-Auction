@@ -53,7 +53,7 @@ export function Player3DCard({
     if (status === 'unsold') {
       return 'border-2 border-red-500 shadow-[0_0_50px_rgba(239,68,68,0.35)] ring-2 ring-red-500/60';
     }
-    return 'border border-zinc-800 shadow-2xl shadow-black/90 hover:border-amber-400/60';
+    return 'border border-[#f5d77f]/30 shadow-2xl shadow-[#040811]/90 hover:border-[#f5d77f]/60';
   };
 
   return (
@@ -62,14 +62,14 @@ export function Player3DCard({
         isProjectorMode ? 'max-w-2xl mx-auto' : 'max-w-xl mx-auto'
       }`}
     >
-      {/* 3D Dynamic Card Container (Black & Gold Theme) */}
+      {/* 3D Dynamic Card Container (Dark Blue & Light Gold Theme) */}
       <div
-        className={`relative w-full rounded-3xl bg-gradient-to-b from-zinc-950 via-black to-zinc-950 backdrop-blur-xl transition-transform duration-500 preserve-3d animate-float-card ${
+        className={`relative w-full rounded-3xl bg-gradient-to-b from-[#0b172a] via-[#060c16] to-[#0a1526] backdrop-blur-xl transition-transform duration-500 preserve-3d animate-float-card ${
           isProjectorMode ? 'p-3 sm:p-4 md:p-5' : 'p-5 sm:p-7 md:p-8'
         } ${getCardStatusBorder()}`}
       >
         {/* Top Crisp Glowing Highlight */}
-        <div className="absolute top-0 left-1/4 right-1/4 h-[2px] bg-gradient-to-r from-transparent via-amber-400 to-transparent opacity-90 drop-shadow-[0_0_8px_rgba(245,158,11,0.8)]" />
+        <div className="absolute top-0 left-1/4 right-1/4 h-[2px] bg-gradient-to-r from-transparent via-[#f5d77f] to-transparent opacity-90 drop-shadow-[0_0_8px_rgba(245,215,127,0.8)]" />
 
         {/* Round Badge (Regular vs Unsold Round) */}
         {round === 'unsold' && (
@@ -82,12 +82,12 @@ export function Player3DCard({
         {/* Player Image Showcase */}
         <div className={`relative w-full flex justify-center ${isProjectorMode ? 'mb-2 sm:mb-3' : 'mb-6'}`}>
           <div
-            className={`relative rounded-2xl overflow-hidden shadow-xl bg-black border-2 ${
+            className={`relative rounded-2xl overflow-hidden shadow-xl bg-[#060c16] border-2 ${
               status === 'sold'
                 ? 'border-emerald-500 shadow-emerald-950/40'
                 : status === 'unsold'
                 ? 'border-red-500 shadow-red-950/40'
-                : 'border-zinc-800 shadow-black/80 hover:border-amber-400/50'
+                : 'border-[#f5d77f]/30 shadow-[#040811]/80 hover:border-[#f5d77f]/60'
             } ${
               isProjectorMode
                 ? 'h-40 sm:h-48 md:h-56 lg:h-64 max-h-[30vh] aspect-square'
@@ -103,19 +103,19 @@ export function Player3DCard({
                 loading="eager"
               />
             ) : (
-              <div className="w-full h-full flex flex-col items-center justify-center bg-black text-zinc-400 p-4 text-center">
-                <Shield className="w-16 h-16 text-amber-400 mb-2 opacity-60 drop-shadow-[0_0_8px_rgba(245,158,11,0.4)]" />
+              <div className="w-full h-full flex flex-col items-center justify-center bg-[#060c16] text-[#a1b3cb] p-4 text-center">
+                <Shield className="w-16 h-16 text-[#f5d77f] mb-2 opacity-60 drop-shadow-[0_0_8px_rgba(245,215,127,0.4)]" />
                 <span className="text-sm font-semibold text-zinc-300">{name}</span>
               </div>
             )}
 
             {/* Gradient shadow overlay at bottom of photo */}
-            <div className="absolute inset-x-0 bottom-0 h-10 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
+            <div className="absolute inset-x-0 bottom-0 h-10 bg-gradient-to-t from-[#060c16]/90 via-transparent to-transparent" />
 
             {/* Role tag over photo */}
-            <div className="absolute top-2.5 right-2.5 px-3 py-1 rounded-xl bg-black/95 border border-amber-500/40 backdrop-blur-md flex items-center gap-1.5 shadow-md">
+            <div className="absolute top-2.5 right-2.5 px-3 py-1 rounded-xl bg-[#081220]/95 border border-[#f5d77f]/40 backdrop-blur-md flex items-center gap-1.5 shadow-md">
               {getRoleIcon(role)}
-              <span className="text-xs font-black tracking-wide text-amber-400">
+              <span className="text-xs font-black tracking-wide text-[#f5d77f]">
                 {role}
               </span>
             </div>
@@ -136,28 +136,28 @@ export function Player3DCard({
 
           {/* Base Points & Current Bid Points Row */}
           <div className="flex items-center justify-center gap-3 sm:gap-4 pt-0.5 flex-wrap">
-            <div className={`rounded-2xl bg-zinc-950 border border-zinc-800 flex flex-col items-center shadow-xs ${
+            <div className={`rounded-2xl bg-[#060c16] border border-[#13243f] flex flex-col items-center shadow-xs ${
               isProjectorMode ? 'px-3.5 py-1.5 min-w-[100px]' : 'px-5 py-2.5 min-w-[130px]'
             }`}>
-              <span className="text-[10px] sm:text-xs uppercase tracking-wider font-bold text-zinc-400">
+              <span className="text-[10px] sm:text-xs uppercase tracking-wider font-bold text-[#a1b3cb]">
                 Base Points
               </span>
-              <span className={`font-black text-amber-400 ${isProjectorMode ? 'text-lg sm:text-xl' : 'text-xl sm:text-2xl'}`}>
+              <span className={`font-black text-[#f5d77f] ${isProjectorMode ? 'text-lg sm:text-xl' : 'text-xl sm:text-2xl'}`}>
                 {basePoints}
               </span>
             </div>
 
-            <div className={`rounded-2xl bg-gradient-to-r from-amber-400 to-amber-500 text-black border border-amber-300/70 flex flex-col items-center shadow-lg shadow-amber-500/20 ${
+            <div className={`rounded-2xl bg-gradient-to-r from-[#fae29c] via-[#f5d77f] to-[#e0bc50] text-[#060c16] border border-[#fff4c2] flex flex-col items-center shadow-lg shadow-amber-900/20 ${
               isProjectorMode ? 'px-3.5 py-1.5 min-w-[120px]' : 'px-5 py-2.5 min-w-[150px]'
             }`}>
-              <span className="text-[10px] sm:text-xs uppercase tracking-wider font-black text-black">
+              <span className="text-[10px] sm:text-xs uppercase tracking-wider font-black text-[#060c16]">
                 {status === 'sold' ? 'Highest Bid' : 'Current Points'}
               </span>
               <span
-                className={`font-black text-black ${isProjectorMode ? 'text-xl sm:text-2xl' : 'text-2xl sm:text-3xl'}`}
+                className={`font-black text-[#060c16] ${isProjectorMode ? 'text-xl sm:text-2xl' : 'text-2xl sm:text-3xl'}`}
               >
                 {currentPoints !== undefined ? currentPoints : basePoints}{' '}
-                <span className="text-xs font-bold text-black/80">PTS</span>
+                <span className="text-xs font-bold text-[#060c16]/80">PTS</span>
               </span>
             </div>
           </div>
@@ -213,15 +213,15 @@ export function Player3DCard({
           )}
 
           {status === 'bidding' && (
-            <div className={`rounded-2xl bg-zinc-950 border border-zinc-800 text-center shadow-xs ${
+            <div className={`rounded-2xl bg-[#060c16] border border-[#13243f] text-center shadow-xs ${
               isProjectorMode ? 'p-2.5 sm:p-3' : 'p-4 sm:p-5'
             }`}>
               {winningTeamName ? (
                 <div className="flex flex-col sm:flex-row items-center justify-center gap-2 text-white text-sm sm:text-base">
-                  <span className="text-zinc-400 font-bold uppercase tracking-wider text-xs">
+                  <span className="text-[#a1b3cb] font-bold uppercase tracking-wider text-xs">
                     Highest Bidder:
                   </span>
-                  <span className="font-black text-amber-400 text-base sm:text-lg">
+                  <span className="font-black text-[#f5d77f] text-base sm:text-lg">
                     {winningTeamName}
                   </span>
                   <span className="text-emerald-400 font-black text-base sm:text-lg">
@@ -229,10 +229,10 @@ export function Player3DCard({
                   </span>
                 </div>
               ) : (
-                <div className="flex items-center justify-center gap-2 text-zinc-300 text-xs sm:text-sm font-bold">
+                <div className="flex items-center justify-center gap-2 text-[#c5d3e8] text-xs sm:text-sm font-bold">
                   <span className="relative flex h-2.5 w-2.5">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
-                    <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-amber-400"></span>
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#f5d77f] opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-[#f5d77f]"></span>
                   </span>
                   Bidding in progress &bull; Base Price {basePoints} PTS
                 </div>

@@ -1,0 +1,185 @@
+
+<svg width="1208" height="924" viewBox="0 0 1208 924" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <radialGradient id="dialFill" cx="47%" cy="50%" r="55%">
+      <stop offset="0%" stop-color="#0f263f" />
+      <stop offset="45%" stop-color="#0b1b2d" />
+      <stop offset="85%" stop-color="#071321" />
+      <stop offset="100%" stop-color="#040b15" />
+    </radialGradient>
+
+    <linearGradient id="goldTextGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff" />
+      <stop offset="25%" stop-color="#fef08a" />
+      <stop offset="55%" stop-color="#fbbf24" />
+      <stop offset="80%" stop-color="#d97706" />
+      <stop offset="100%" stop-color="#78350f" />
+    </linearGradient>
+
+    <linearGradient id="plaqueGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#0d2b52" />
+      <stop offset="50%" stop-color="#081b34" />
+      <stop offset="100%" stop-color="#030c18" />
+    </linearGradient>
+
+    <filter id="softGlow">
+      <feGaussianBlur stdDeviation="3" result="blur" />
+      <feMerge>
+        <feMergeNode in="blur" />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- 1. Dial Backdrop Polygon (Seamlessly covers old TATA IPL text) -->
+  <polygon
+    points="486,334 634,334 706,392 718,460 706,528 634,586 486,586 414,528 402,460 414,392"
+    fill="url(#dialFill)"
+    stroke="#22d3ee"
+    stroke-width="1.5"
+    stroke-opacity="0.4"
+  />
+
+  <!-- Subtle inner polygon ring -->
+  <polygon
+    points="492,340 628,340 698,396 710,460 698,524 628,580 492,580 422,524 410,460 422,396"
+    fill="none"
+    stroke="#0284c7"
+    stroke-width="0.8"
+    stroke-opacity="0.6"
+  />
+
+  <!-- 2. Dynamic Batsman Silhouette (on the left side, matching original position) -->
+  <g transform="translate(485, 442) scale(1.15)">
+    <!-- Cyan & Crimson Motion Arcs -->
+    <path d="M -24 16 C -32 -2 -14 -22 10 -22 C 22 -22 30 -14 36 -2" fill="none" stroke="#22d3ee" stroke-width="3" stroke-linecap="round" opacity="0.85" filter="url(#softGlow)" />
+    <path d="M -18 14 C -24 0 -10 -14 8 -14 C 18 -14 24 -8 28 0" fill="none" stroke="#ef4444" stroke-width="2" stroke-linecap="round" opacity="0.9" />
+
+    <!-- Batsman Head & Helmet -->
+    <circle cx="-6" cy="-12" r="5" fill="#ffffff" />
+    <path d="M -9 -12 L -2 -12 L -4 -8 L -9 -8 Z" fill="#38bdf8" />
+
+    <!-- Batsman Body & Powerful Drive Stance -->
+    <path d="M -8 -7 L 0 -7 L 4 3 L -1 9 L -5 22 L -11 21 L -6 8 L -11 3 Z" fill="#ffffff" />
+    <path d="M 0 -2 L 14 16 L 9 20 L -2 3 Z" fill="#e2e8f0" />
+
+    <!-- Cricket Bat & Hands -->
+    <path d="M -2 -6 L 10 -15 L 7 -18 L -4 -9 Z" fill="#ffffff" />
+    <path d="M 9 -17 L 34 -32 L 36 -29 L 12 -14 Z" fill="#fbbf24" stroke="#78350f" stroke-width="0.8" />
+    <circle cx="28" cy="-35" r="3" fill="#ef4444" stroke="#ffffff" stroke-width="0.8" />
+  </g>
+
+  <!-- 3. Tournament Header "ZHEP PREMIER LEAGUE" (Above ZPL, replacing TATA) -->
+  <text
+    x="594"
+    y="405"
+    text-anchor="middle"
+    fill="#38bdf8"
+    font-size="12"
+    font-weight="900"
+    letter-spacing="2"
+    font-family="system-ui, -apple-system, sans-serif"
+    filter="url(#softGlow)"
+  >
+    ZHEP PREMIER LEAGUE
+  </text>
+
+  <!-- 4. Main "ZPL" Championship Text (Replacing IPL) -->
+  <!-- Shadow -->
+  <text
+    x="596"
+    y="464"
+    text-anchor="middle"
+    fill="#000000"
+    font-size="64"
+    font-weight="950"
+    letter-spacing="5"
+    font-family="Arial Black, Impact, sans-serif"
+    opacity="0.9"
+  >
+    ZPL
+  </text>
+  <!-- Main Metallic Fill -->
+  <text
+    x="594"
+    y="462"
+    text-anchor="middle"
+    fill="url(#goldTextGrad)"
+    stroke="#78350f"
+    stroke-width="1.5"
+    font-size="64"
+    font-weight="950"
+    letter-spacing="5"
+    font-family="Arial Black, Impact, sans-serif"
+  >
+    ZPL
+  </text>
+  <!-- Top Specular Highlight -->
+  <text
+    x="594"
+    y="460"
+    text-anchor="middle"
+    fill="#ffffff"
+    font-size="64"
+    font-weight="950"
+    letter-spacing="5"
+    font-family="Arial Black, Impact, sans-serif"
+    opacity="0.35"
+  >
+    ZPL
+  </text>
+
+  <!-- 5. AUCTION Plaque Banner (Below ZPL) -->
+  <g transform="translate(506, 492)">
+    <!-- Drop Shadow -->
+    <path d="M 8 2 L 168 2 L 176 17 L 168 32 L 8 32 L 0 17 Z" fill="#000000" opacity="0.75" />
+
+    <!-- Outer Cyan Border -->
+    <path d="M 8 0 L 168 0 L 176 16 L 168 32 L 8 32 L 0 16 Z" fill="#0284c7" stroke="#38bdf8" stroke-width="1.2" />
+
+    <!-- Inner Navy Plaque -->
+    <path d="M 12 3 L 164 3 L 170 16 L 164 29 L 12 29 L 6 16 Z" fill="url(#plaqueGrad)" stroke="#fbbf24" stroke-width="0.8" />
+
+    <!-- Mini Left Gavel -->
+    <g transform="translate(18, 16) scale(0.5)">
+      <rect x="-8" y="-5" width="16" height="10" rx="1.5" fill="#e2e8f0" stroke="#0f172a" stroke-width="0.8" />
+      <line x1="0" y1="5" x2="0" y2="18" stroke="#fbbf24" stroke-width="3" />
+    </g>
+
+    <!-- AUCTION Lettering -->
+    <text
+      x="88"
+      y="22"
+      text-anchor="middle"
+      fill="#ffffff"
+      font-size="16"
+      font-weight="950"
+      letter-spacing="6"
+      font-family="Arial Black, Impact, sans-serif"
+      filter="url(#softGlow)"
+    >
+      AUCTION
+    </text>
+
+    <!-- Mini Right Gavel -->
+    <g transform="translate(158, 16) scale(0.5) scale(-1, 1)">
+      <rect x="-8" y="-5" width="16" height="10" rx="1.5" fill="#e2e8f0" stroke="#0f172a" stroke-width="0.8" />
+      <line x1="0" y1="5" x2="0" y2="18" stroke="#fbbf24" stroke-width="3" />
+    </g>
+  </g>
+
+  <!-- Sub-caption year -->
+  <text
+    x="594"
+    y="552"
+    text-anchor="middle"
+    fill="#fef08a"
+    font-size="11"
+    font-weight="800"
+    letter-spacing="3"
+    font-family="system-ui, -apple-system, sans-serif"
+    opacity="0.9"
+  >
+    ZHEP KRIDA MANDAL
+  </text>
+</svg>

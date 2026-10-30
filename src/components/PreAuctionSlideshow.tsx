@@ -90,20 +90,20 @@ function PreAuctionSlideshowComponent({
           : 'max-w-5xl mx-auto space-y-4'
       } animate-in fade-in duration-300`}
     >
-      {/* TOP COUNTDOWN / PRE-AUCTION HEADER (BLACK & GOLD THEME) */}
+      {/* TOP COUNTDOWN / PRE-AUCTION HEADER */}
       {!isProjectorMode && (
-        <div className="rounded-3xl bg-zinc-950 border border-zinc-800 p-4 sm:p-5 shadow-xl flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="rounded-3xl bg-[#0a1526] border border-[#f5d77f]/25 p-4 sm:p-5 shadow-xl flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <div className="p-2.5 rounded-2xl bg-black border border-amber-500/40 shadow-xs">
-              <Trophy className="w-6 h-6 text-amber-400 drop-shadow-[0_0_8px_rgba(245,158,11,0.5)]" />
+            <div className="p-2.5 rounded-2xl bg-[#060c16] border border-[#f5d77f]/40 shadow-xs">
+              <Trophy className="w-6 h-6 text-[#f5d77f] drop-shadow-[0_0_8px_rgba(245,215,127,0.5)]" />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-gradient-to-r from-amber-400 to-amber-500 text-black text-[10px] font-black uppercase tracking-wider">
-                  <Sparkles className="w-3 h-3" />
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-gradient-to-r from-[#fae29c] via-[#f5d77f] to-[#e0bc50] text-[#060c16] text-[10px] font-black uppercase tracking-wider">
+                  <Sparkles className="w-3 h-3 text-[#060c16]" />
                   <span>Pre-Auction Broadcast</span>
                 </span>
-                <span className="text-xs font-bold text-amber-400">
+                <span className="text-xs font-bold text-[#f5d77f]">
                   Starts Soon
                 </span>
               </div>
@@ -114,10 +114,10 @@ function PreAuctionSlideshowComponent({
           </div>
 
           {/* SCHEDULE BADGE */}
-          <div className="flex items-center gap-3 bg-black border border-zinc-800 px-4 py-2 rounded-2xl shadow-sm self-start sm:self-auto">
-            <Calendar className="w-4 h-4 text-amber-400 shrink-0" />
+          <div className="flex items-center gap-3 bg-[#060c16] border border-[#13243f] px-4 py-2 rounded-2xl shadow-sm self-start sm:self-auto">
+            <Calendar className="w-4 h-4 text-[#f5d77f] shrink-0" />
             <div className="text-xs">
-              <span className="text-zinc-400 font-semibold block">
+              <span className="text-[#a1b3cb] font-semibold block">
                 Scheduled Live Time
               </span>
               <span className="font-black text-white">
@@ -128,9 +128,9 @@ function PreAuctionSlideshowComponent({
         </div>
       )}
 
-      {/* MAIN CAROUSEL SHOWCASE (BLACK & GOLD THEME) */}
+      {/* MAIN CAROUSEL SHOWCASE */}
       <div
-        className={`relative overflow-hidden rounded-3xl bg-gradient-to-b from-zinc-950 via-black to-zinc-950 border border-zinc-800 shadow-2xl ${
+        className={`relative overflow-hidden rounded-3xl bg-gradient-to-b from-[#0a1526] via-[#060c16] to-[#0a1526] border border-[#f5d77f]/25 shadow-2xl ${
           isProjectorMode
             ? 'w-full flex-1 min-h-0 h-full flex flex-col'
             : 'h-[520px] sm:h-[590px] md:h-[640px]'
@@ -155,38 +155,38 @@ function PreAuctionSlideshowComponent({
                 <span
                   className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider shadow-md ${
                     isSocialSlide
-                      ? 'bg-gradient-to-r from-amber-400 to-amber-500 text-black'
+                      ? 'bg-gradient-to-r from-[#fae29c] via-[#f5d77f] to-[#e0bc50] text-[#060c16]'
                       : currentSlide.category === 'champion'
-                      ? 'bg-gradient-to-r from-amber-400 to-amber-500 text-black font-black'
+                      ? 'bg-gradient-to-r from-[#fae29c] via-[#f5d77f] to-[#e0bc50] text-[#060c16] font-black'
                       : currentSlide.category === 'team_logo'
-                      ? 'bg-zinc-950 text-amber-400 border border-amber-500/40'
-                      : 'bg-zinc-950 text-white border border-zinc-800'
+                      ? 'bg-[#081220] text-[#f5d77f] border border-[#f5d77f]/40'
+                      : 'bg-[#081220] text-white border border-[#13243f]'
                   }`}
                 >
                   {isSocialSlide ? (
                     <>
-                      <Share2 className="w-3.5 h-3.5" />
+                      <Share2 className="w-3.5 h-3.5 text-[#060c16]" />
                       <span>Official Social Channels</span>
                     </>
                   ) : currentSlide.category === 'champion' ? (
                     <>
-                      <Trophy className="w-3.5 h-3.5 text-black mr-0.5" />
+                      <Trophy className="w-3.5 h-3.5 text-[#060c16] mr-0.5" />
                       <span>Last Year Champion</span>
                     </>
                   ) : currentSlide.category === 'team_logo' ? (
                     <>
-                      <Shield className="w-3.5 h-3.5 text-amber-400" />
+                      <Shield className="w-3.5 h-3.5 text-[#f5d77f]" />
                       <span>Official Team Logo</span>
                     </>
                   ) : (
                     <>
-                      <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+                      <Sparkles className="w-3.5 h-3.5 text-[#f5d77f]" />
                       <span>Auction Highlight</span>
                     </>
                   )}
                 </span>
 
-                <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-zinc-950 border border-zinc-800 text-zinc-300 text-xs font-bold shadow-xs">
+                <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-[#081220] border border-[#13243f] text-[#c5d3e8] text-xs font-bold shadow-xs">
                   <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
                   <span>Live Arena Armed</span>
                 </div>
@@ -195,124 +195,75 @@ function PreAuctionSlideshowComponent({
               {/* MAIN CONTENT: PHOTO vs SOCIAL MEDIA FINALE SLIDE */}
               {isSocialSlide ? (
                 <div className="w-full flex-1 flex flex-col items-center justify-center my-1 sm:my-2 min-h-0 z-20 overflow-y-auto">
-                  <div className={`w-full max-w-2xl bg-zinc-950 backdrop-blur-md rounded-3xl border border-zinc-800 shadow-2xl text-center ${
+                  <div className={`w-full max-w-2xl bg-[#081220] backdrop-blur-md rounded-3xl border border-[#f5d77f]/30 shadow-2xl text-center ${
                     isProjectorMode ? 'p-4 sm:p-5 space-y-3' : 'p-6 sm:p-8 space-y-6'
                   }`}>
-                    <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-black border border-amber-500/30 text-amber-400 text-xs font-black uppercase tracking-wider">
-                      <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-                      <span>Connect With Us &bull; Stay Connected</span>
+                    <div className="flex items-center justify-center gap-3">
+                      <div className="w-12 h-12 rounded-full bg-[#060c16] border border-[#f5d77f]/40 flex items-center justify-center shadow-lg">
+                        <Trophy className="w-6 h-6 text-[#f5d77f]" />
+                      </div>
+                      <div className="text-left">
+                        <span className="text-[10px] font-black uppercase tracking-widest text-[#f5d77f] block">
+                          Zhep Krida Mandal
+                        </span>
+                        <h3 className="text-xl sm:text-2xl font-black text-white uppercase tracking-tight">
+                          Connect With Us
+                        </h3>
+                      </div>
                     </div>
 
-                    <div className="space-y-1">
-                      <h3 className={`font-black text-white tracking-tight ${
-                        isProjectorMode ? 'text-xl sm:text-2xl md:text-3xl' : 'text-2xl sm:text-3xl md:text-4xl'
-                      }`}>
-                        Follow Zhep Krida Mandal
-                      </h3>
-                      <p className="text-xs sm:text-sm text-zinc-400 font-medium max-w-lg mx-auto">
-                        Get live auction bids, auction video recaps, team rosters, and championship photos directly on your feed!
-                      </p>
-                    </div>
+                    <p className="text-xs sm:text-sm text-[#c5d3e8] max-w-lg mx-auto">
+                      Follow our official pages for real-time bid updates, player interviews, squad photos, and tournament highlights.
+                    </p>
 
-                    {/* SOCIAL CARDS GRID */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-left">
-                      {/* INSTAGRAM CARD */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-w-md mx-auto pt-1">
                       <a
-                        href="https://www.instagram.com/zhep_krida_mandal?stkn=NjZpMXY0d25rb2t1"
+                        href="https://instagram.com"
                         target="_blank"
                         rel="noreferrer"
-                        className="group p-3 sm:p-4 rounded-2xl bg-black border border-zinc-800 hover:border-amber-400/60 transition-all shadow-md hover:shadow-xl active:scale-98 flex flex-col justify-between"
+                        className="flex items-center justify-center gap-2.5 p-3 rounded-2xl bg-gradient-to-r from-pink-600 via-rose-500 to-amber-500 text-white font-black text-xs sm:text-sm shadow-lg hover:opacity-95 transition-all"
                       >
-                        <div className="flex items-center justify-between gap-2 mb-2">
-                          <div className="p-2.5 rounded-xl bg-gradient-to-tr from-amber-500 via-amber-400 to-amber-600 text-black shadow-md">
-                            <Instagram className="w-5 h-5 sm:w-6 sm:h-6" />
-                          </div>
-                          <span className="p-1 rounded-full bg-zinc-900 text-amber-400 group-hover:bg-amber-400 group-hover:text-black transition-colors border border-zinc-700">
-                            <ExternalLink className="w-3.5 h-3.5" />
-                          </span>
-                        </div>
-
-                        <div className="space-y-0.5">
-                          <span className="text-[10px] font-black uppercase tracking-wider text-amber-400 block">
-                            Instagram
-                          </span>
-                          <p className="text-xs font-bold text-zinc-300">
-                            Follow us on IG
-                          </p>
-                          <p className="text-base sm:text-lg font-black text-white group-hover:text-amber-400 transition-colors">
-                            @zhep_krida_mandal
-                          </p>
-                          <span className="text-[10px] text-zinc-500 font-medium block pt-0.5">
-                            Stories &bull; Highlights &bull; Reels
-                          </span>
-                        </div>
+                        <Instagram className="w-4 h-4" />
+                        <span>Instagram Channel</span>
+                        <ExternalLink className="w-3 h-3 ml-auto opacity-70" />
                       </a>
-
-                      {/* FACEBOOK CARD */}
                       <a
-                        href="https://www.facebook.com/zhepkrida.mandal"
+                        href="https://facebook.com"
                         target="_blank"
                         rel="noreferrer"
-                        className="group p-3 sm:p-4 rounded-2xl bg-black border border-zinc-800 hover:border-amber-400/60 transition-all shadow-md hover:shadow-xl active:scale-98 flex flex-col justify-between"
+                        className="flex items-center justify-center gap-2.5 p-3 rounded-2xl bg-blue-600 text-white font-black text-xs sm:text-sm shadow-lg hover:bg-blue-500 transition-all"
                       >
-                        <div className="flex items-center justify-between gap-2 mb-2">
-                          <div className="p-2.5 rounded-xl bg-gradient-to-r from-amber-400 to-amber-500 text-black shadow-md">
-                            <Facebook className="w-5 h-5 sm:w-6 sm:h-6 fill-current" />
-                          </div>
-                          <span className="p-1 rounded-full bg-zinc-900 text-amber-400 group-hover:bg-amber-400 group-hover:text-black transition-colors border border-zinc-700">
-                            <ExternalLink className="w-3.5 h-3.5" />
-                          </span>
-                        </div>
-
-                        <div className="space-y-0.5">
-                          <span className="text-[10px] font-black uppercase tracking-wider text-amber-400 block">
-                            Facebook
-                          </span>
-                          <p className="text-xs font-bold text-zinc-300">
-                            Follow us on Facebook
-                          </p>
-                          <p className="text-base sm:text-lg font-black text-white group-hover:text-amber-400 transition-colors">
-                            Zhep Krida mandal
-                          </p>
-                          <span className="text-[10px] text-zinc-500 font-medium block pt-0.5">
-                            Full Albums &bull; Live Streams &bull; Updates
-                          </span>
-                        </div>
+                        <Facebook className="w-4 h-4" />
+                        <span>Facebook Page</span>
+                        <ExternalLink className="w-3 h-3 ml-auto opacity-70" />
                       </a>
                     </div>
                   </div>
                 </div>
               ) : (
-                /* BIG HERO PHOTO CONTAINER - FITS 100% IN FRAME WITHOUT CUTTING */
-                <div className="w-full flex-1 min-h-0 flex items-center justify-center my-1 sm:my-2 relative overflow-hidden">
-                  <div className="relative h-full max-h-full max-w-full flex items-center justify-center p-2 rounded-2xl bg-black shadow-xl border border-zinc-800 backdrop-blur-xs">
+                <div className="relative w-full flex-1 flex items-center justify-center min-h-0 my-2 sm:my-3 z-10">
+                  <div className="relative max-h-full max-w-full rounded-2xl overflow-hidden border border-[#f5d77f]/30 shadow-2xl bg-[#060c16]">
                     <img
                       src={currentSlide.url}
                       alt={currentSlide.title}
-                      className="max-h-full max-w-full w-auto h-auto object-contain rounded-xl select-none transition-all duration-300"
-                      onError={(e) => {
-                        (e.target as HTMLImageElement).src =
-                          'https://images.unsplash.com/photo-1540747913346-19e32dc3e97e?w=1200&auto=format&fit=crop&q=80';
-                      }}
+                      className="max-h-[340px] sm:max-h-[420px] md:max-h-[460px] w-auto object-contain rounded-2xl"
                     />
                   </div>
                 </div>
               )}
 
-              {/* CLEAN TITLE & CAPTION */}
-              <div className="w-full text-center space-y-0.5 z-20 max-w-2xl px-4 py-2 bg-zinc-950 backdrop-blur-md rounded-2xl border border-zinc-800 shadow-lg shrink-0">
-                <h3
-                  className={`font-black text-white tracking-tight leading-tight ${
-                    isProjectorMode ? 'text-lg sm:text-2xl md:text-3xl' : 'text-xl sm:text-2xl md:text-3xl'
-                  }`}
-                >
-                  {currentSlide.title}
-                </h3>
-                {currentSlide.caption && (
-                  <p className="text-xs sm:text-sm text-zinc-400 font-medium line-clamp-1 sm:line-clamp-2">
-                    {currentSlide.caption}
-                  </p>
-                )}
+              {/* BOTTOM CAPTION */}
+              <div className="w-full z-20 shrink-0 text-center">
+                <div className="max-w-xl mx-auto px-4 py-2 rounded-2xl bg-[#060c16]/90 border border-[#13243f] backdrop-blur-md shadow-lg">
+                  <h4 className="text-sm sm:text-base font-black text-white uppercase tracking-tight truncate">
+                    {currentSlide.title}
+                  </h4>
+                  {currentSlide.caption && (
+                    <p className="text-[11px] sm:text-xs text-[#a1b3cb] truncate">
+                      {currentSlide.caption}
+                    </p>
+                  )}
+                </div>
               </div>
             </motion.div>
           </AnimatePresence>
@@ -323,3 +274,4 @@ function PreAuctionSlideshowComponent({
 }
 
 export const PreAuctionSlideshow = React.memo(PreAuctionSlideshowComponent);
+export default PreAuctionSlideshow;

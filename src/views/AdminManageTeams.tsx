@@ -226,19 +226,26 @@ export function AdminManageTeams({ auctionId, auctionName, onBack }: AdminManage
   };
 
   return (
-    <div className="min-h-screen bg-black text-white p-4 sm:p-6 lg:p-8 selection:bg-amber-400 selection:text-black">
+    <div className="min-h-screen bg-[#060c16] text-white p-4 sm:p-6 lg:p-8 selection:bg-[#f5d77f] selection:text-[#060c16]">
       <div className="max-w-7xl mx-auto space-y-6">
         {/* HEADER */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-zinc-800">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-[#13243f]">
           <div className="flex items-center gap-3">
             <button
               onClick={onBack}
-              className="p-2.5 rounded-2xl bg-zinc-950 border border-amber-500/30 hover:bg-zinc-900 text-amber-400 hover:text-amber-200 transition-colors cursor-pointer"
+              className="p-2.5 rounded-2xl bg-[#0a1526] border border-[#f5d77f]/30 hover:bg-[#0e1f38] text-[#f5d77f] hover:text-[#fff4c2] transition-colors cursor-pointer"
             >
               <ChevronLeft className="w-5 h-5" />
             </button>
+            <div className="w-12 h-12 rounded-full bg-[#081220] border-2 border-[#f5d77f]/60 p-0.5 flex items-center justify-center shadow-lg ring-1 ring-[#f5d77f]/30 shrink-0 overflow-hidden">
+              <img
+                src="/assets/aistudio/file_00000000661882118ee895643705c2c1_2d4830dd.png"
+                alt="ZPL Official Logo"
+                className="w-full h-full object-contain filter contrast-105"
+              />
+            </div>
             <div>
-              <span className="text-xs uppercase font-black tracking-widest text-amber-400">
+              <span className="text-xs uppercase font-black tracking-widest text-[#f5d77f]">
                 {auctionName}
               </span>
               <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
@@ -249,7 +256,7 @@ export function AdminManageTeams({ auctionId, auctionName, onBack }: AdminManage
 
           <button
             onClick={handleOpenAdd}
-            className="flex items-center justify-center gap-2 px-5 py-2.5 rounded-2xl bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-black font-black text-sm transition-all shadow-lg shadow-amber-500/20 cursor-pointer active:scale-98"
+            className="flex items-center justify-center gap-2 px-5 py-2.5 rounded-2xl bg-gradient-to-r from-[#fae29c] via-[#f5d77f] to-[#e0bc50] hover:from-[#fff0b8] hover:to-[#ebc860] text-[#060c16] font-black text-sm transition-all shadow-lg shadow-amber-900/30 cursor-pointer active:scale-98"
           >
             <Plus className="w-4 h-4 stroke-[3]" />
             <span>Add New Team</span>
@@ -259,19 +266,19 @@ export function AdminManageTeams({ auctionId, auctionName, onBack }: AdminManage
         {/* TEAMS LIST */}
         {loading ? (
           <div className="py-20 text-center">
-            <div className="w-10 h-10 border-4 border-amber-400 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
-            <p className="text-zinc-400 text-sm font-semibold">Loading teams...</p>
+            <div className="w-10 h-10 border-4 border-[#f5d77f] border-t-transparent rounded-full animate-spin mx-auto mb-3" />
+            <p className="text-[#a1b3cb] text-sm font-semibold">Loading teams...</p>
           </div>
         ) : teams.length === 0 ? (
-          <div className="rounded-3xl bg-zinc-950 border border-zinc-800 p-12 text-center space-y-4 shadow-xl">
-            <Shield className="w-16 h-16 text-amber-400/60 mx-auto" />
+          <div className="rounded-3xl bg-[#0a1526] border border-[#f5d77f]/25 p-12 text-center space-y-4 shadow-xl">
+            <Shield className="w-16 h-16 text-[#f5d77f]/60 mx-auto" />
             <h3 className="text-xl font-black text-white">No Teams Registered Yet</h3>
-            <p className="text-zinc-400 text-sm max-w-md mx-auto">
+            <p className="text-[#a1b3cb] text-sm max-w-md mx-auto">
               Add teams that will participate in this auction. You can assign starting purse points and custom logos.
             </p>
             <button
               onClick={handleOpenAdd}
-              className="px-6 py-2.5 rounded-2xl bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-black font-black text-sm inline-flex items-center gap-2 shadow-lg shadow-amber-500/20 cursor-pointer active:scale-98"
+              className="px-6 py-2.5 rounded-2xl bg-gradient-to-r from-[#fae29c] via-[#f5d77f] to-[#e0bc50] hover:from-[#fff0b8] hover:to-[#ebc860] text-[#060c16] font-black text-sm inline-flex items-center gap-2 shadow-lg shadow-amber-900/30 cursor-pointer active:scale-98"
             >
               <Plus className="w-4 h-4 stroke-[3]" />
               <span>Add First Team</span>
@@ -282,14 +289,14 @@ export function AdminManageTeams({ auctionId, auctionName, onBack }: AdminManage
             {teams.map((t) => (
               <div
                 key={t.id}
-                className="rounded-3xl bg-zinc-950 border border-zinc-800 hover:border-amber-400/40 p-5 shadow-xl hover:shadow-2xl transition-all flex flex-col justify-between space-y-4"
+                className="rounded-3xl bg-[#0a1526] border border-[#f5d77f]/20 hover:border-[#f5d77f]/50 p-5 shadow-xl hover:shadow-2xl transition-all flex flex-col justify-between space-y-4"
               >
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex items-center gap-3">
                     <img
                       src={t.logoUrl}
                       alt={t.name}
-                      className="w-14 h-14 rounded-full object-cover border-2 border-amber-400 shadow-md bg-black"
+                      className="w-14 h-14 rounded-full object-cover border-2 border-[#f5d77f]/60 shadow-md bg-[#060c16]"
                     />
                     <div>
                       <h3 className="font-black text-white text-lg">{t.name}</h3>

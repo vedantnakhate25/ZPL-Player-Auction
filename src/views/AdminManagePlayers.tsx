@@ -270,19 +270,26 @@ export function AdminManagePlayers({
   });
 
   return (
-    <div className="min-h-screen bg-black text-white p-4 sm:p-6 lg:p-8 selection:bg-amber-400 selection:text-black">
+    <div className="min-h-screen bg-[#060c16] text-white p-4 sm:p-6 lg:p-8 selection:bg-[#f5d77f] selection:text-[#060c16]">
       <div className="max-w-7xl mx-auto space-y-6">
         {/* HEADER */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-zinc-800">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-[#13243f]">
           <div className="flex items-center gap-3">
             <button
               onClick={onBack}
-              className="p-2.5 rounded-2xl bg-zinc-950 border border-amber-500/30 hover:bg-zinc-900 text-amber-400 hover:text-amber-200 transition-colors cursor-pointer"
+              className="p-2.5 rounded-2xl bg-[#0a1526] border border-[#f5d77f]/30 hover:bg-[#0e1f38] text-[#f5d77f] hover:text-[#fff4c2] transition-colors cursor-pointer"
             >
               <ChevronLeft className="w-5 h-5" />
             </button>
+            <div className="w-12 h-12 rounded-full bg-[#081220] border-2 border-[#f5d77f]/60 p-0.5 flex items-center justify-center shadow-lg ring-1 ring-[#f5d77f]/30 shrink-0 overflow-hidden">
+              <img
+                src="/assets/aistudio/file_00000000661882118ee895643705c2c1_2d4830dd.png"
+                alt="ZPL Official Logo"
+                className="w-full h-full object-contain filter contrast-105"
+              />
+            </div>
             <div>
-              <span className="text-xs uppercase font-black tracking-wider text-amber-400">
+              <span className="text-xs uppercase font-black tracking-wider text-[#f5d77f]">
                 {auctionName}
               </span>
               <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
@@ -297,13 +304,13 @@ export function AdminManagePlayers({
               <select
                 value={slotFilter}
                 onChange={(e) => setSlotFilter(e.target.value)}
-                className="px-3.5 py-2.5 rounded-2xl bg-zinc-900 border border-zinc-800 text-xs sm:text-sm font-bold text-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-400 cursor-pointer"
+                className="px-3.5 py-2.5 rounded-2xl bg-[#0a1526] border border-[#13243f] text-xs sm:text-sm font-bold text-[#f5d77f] focus:outline-none focus:ring-2 focus:ring-[#f5d77f] cursor-pointer"
               >
                 <option value="all">All Slots ({availableSlots.length})</option>
                 {availableSlots.map((s) => {
                   const samplePlayer = players.find((p) => (p.slotNumber || 1) === s);
                   return (
-                    <option key={s} value={String(s)} className="bg-zinc-900 text-white">
+                    <option key={s} value={String(s)} className="bg-[#0a1526] text-white">
                       Slot {s}{samplePlayer?.slotName ? `: ${samplePlayer.slotName}` : ''}
                     </option>
                   );
@@ -315,11 +322,11 @@ export function AdminManagePlayers({
             <select
               value={roleFilter}
               onChange={(e) => setRoleFilter(e.target.value)}
-              className="px-3.5 py-2.5 rounded-2xl bg-zinc-900 border border-zinc-800 text-xs sm:text-sm font-bold text-white focus:outline-none focus:ring-2 focus:ring-amber-400 cursor-pointer"
+              className="px-3.5 py-2.5 rounded-2xl bg-[#0a1526] border border-[#13243f] text-xs sm:text-sm font-bold text-white focus:outline-none focus:ring-2 focus:ring-[#f5d77f] cursor-pointer"
             >
               <option value="all">All Roles</option>
               {ROLES.map((r) => (
-                <option key={r} value={r} className="bg-zinc-900 text-white">
+                <option key={r} value={r} className="bg-[#0a1526] text-white">
                   {r}
                 </option>
               ))}
@@ -327,7 +334,7 @@ export function AdminManagePlayers({
 
             <button
               onClick={handleOpenAdd}
-              className="flex items-center justify-center gap-2 px-5 py-2.5 rounded-2xl bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-black font-black text-sm transition-all shadow-lg shadow-amber-500/20 cursor-pointer active:scale-98"
+              className="flex items-center justify-center gap-2 px-5 py-2.5 rounded-2xl bg-gradient-to-r from-[#fae29c] via-[#f5d77f] to-[#e0bc50] hover:from-[#fff0b8] hover:to-[#ebc860] text-[#060c16] font-black text-sm transition-all shadow-lg shadow-amber-900/30 cursor-pointer active:scale-98"
             >
               <Plus className="w-4 h-4 stroke-[3]" />
               <span>Add Player</span>
@@ -338,19 +345,19 @@ export function AdminManagePlayers({
         {/* PLAYERS LIST */}
         {loading ? (
           <div className="py-20 text-center">
-            <div className="w-10 h-10 border-4 border-amber-400 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
-            <p className="text-zinc-400 text-sm font-semibold">Loading players...</p>
+            <div className="w-10 h-10 border-4 border-[#f5d77f] border-t-transparent rounded-full animate-spin mx-auto mb-3" />
+            <p className="text-[#a1b3cb] text-sm font-semibold">Loading players...</p>
           </div>
         ) : filteredPlayers.length === 0 ? (
-          <div className="rounded-3xl bg-zinc-950 border border-zinc-800 p-12 text-center space-y-4">
-            <Users className="w-16 h-16 text-zinc-600 mx-auto" />
+          <div className="rounded-3xl bg-[#0a1526] border border-[#f5d77f]/25 p-12 text-center space-y-4">
+            <Users className="w-16 h-16 text-[#60738e] mx-auto" />
             <h3 className="text-xl font-black text-white">No Players Found</h3>
-            <p className="text-zinc-400 text-sm max-w-md mx-auto">
+            <p className="text-[#a1b3cb] text-sm max-w-md mx-auto">
               Add players to this auction. Remember that base points are decided explicitly by the admin!
             </p>
             <button
               onClick={handleOpenAdd}
-              className="px-6 py-2.5 rounded-2xl bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-black font-black text-sm inline-flex items-center gap-2 shadow-lg cursor-pointer"
+              className="px-6 py-2.5 rounded-2xl bg-gradient-to-r from-[#fae29c] via-[#f5d77f] to-[#e0bc50] hover:from-[#fff0b8] hover:to-[#ebc860] text-[#060c16] font-black text-sm inline-flex items-center gap-2 shadow-lg cursor-pointer"
             >
               <Plus className="w-4 h-4 stroke-[3]" />
               <span>Add First Player</span>
@@ -361,10 +368,10 @@ export function AdminManagePlayers({
             {filteredPlayers.map((p) => (
               <div
                 key={p.id}
-                className="rounded-3xl bg-zinc-950 border border-zinc-800 p-4 shadow-xl hover:border-amber-400/40 transition-all flex flex-col justify-between space-y-3 relative overflow-hidden"
+                className="rounded-3xl bg-[#0a1526] border border-[#f5d77f]/20 p-4 shadow-xl hover:border-[#f5d77f]/50 transition-all flex flex-col justify-between space-y-3 relative overflow-hidden"
               >
                 {/* Photo & Role */}
-                <div className="relative w-full aspect-square rounded-2xl overflow-hidden bg-black border border-zinc-800">
+                <div className="relative w-full aspect-square rounded-2xl overflow-hidden bg-[#060c16] border border-[#13243f]">
                   <img
                     src={p.photoUrl}
                     alt={p.name}

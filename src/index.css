@@ -7,30 +7,38 @@ html {
   text-size-adjust: 100%;
   -webkit-text-size-adjust: 100%;
   overscroll-behavior-y: contain;
+  background-color: #060c16;
+  color: #ffffff;
 }
 
 body {
   padding-left: env(safe-area-inset-left, 0px);
   padding-right: env(safe-area-inset-right, 0px);
   padding-bottom: env(safe-area-inset-bottom, 0px);
+  background-color: #060c16;
+  color: #ffffff;
 }
 
 @theme {
-  --color-gold-50: #fffbeb;
-  --color-gold-100: #fef3c7;
-  --color-gold-200: #fde68a;
-  --color-gold-300: #fcd34d;
-  --color-gold-400: #fbbf24;
-  --color-gold-500: #f59e0b;
-  --color-gold-600: #d97706;
-  --color-gold-700: #b45309;
+  /* Premium Light Gold Scale */
+  --color-gold-50: #fffdf5;
+  --color-gold-100: #fef9c3;
+  --color-gold-200: #fef08a;
+  --color-gold-300: #fde047;
+  --color-gold-400: #f5d77f;
+  --color-gold-500: #e6ca65;
+  --color-gold-600: #d4af37;
+  --color-gold-700: #b38f24;
+  --color-gold-800: #8c6e18;
 
-  --color-black-950: #000000;
-  --color-black-900: #080808;
-  --color-black-850: #101010;
-  --color-black-800: #181818;
-  --color-black-750: #222222;
-  --color-black-700: #2c2c2c;
+  /* Luxury Midnight Navy Scale */
+  --color-navy-950: #040811;
+  --color-navy-900: #060c16;
+  --color-navy-850: #0a1322;
+  --color-navy-800: #0e1a2f;
+  --color-navy-750: #13243f;
+  --color-navy-700: #193155;
+  --color-navy-600: #224270;
 }
 
 @layer utilities {
@@ -60,30 +68,30 @@ body {
 
 @keyframes pulseGold {
   0%, 100% {
-    box-shadow: 0 0 25px rgba(245, 158, 11, 0.3), 0 0 50px rgba(234, 179, 8, 0.2);
+    box-shadow: 0 0 25px rgba(245, 215, 127, 0.25), 0 0 50px rgba(212, 175, 55, 0.15);
   }
   50% {
-    box-shadow: 0 0 45px rgba(245, 158, 11, 0.55), 0 0 80px rgba(234, 179, 8, 0.35);
+    box-shadow: 0 0 45px rgba(245, 215, 127, 0.45), 0 0 80px rgba(212, 175, 55, 0.3);
   }
 }
 
 @keyframes pulseSold {
   0%, 100% {
-    box-shadow: 0 0 35px rgba(34, 197, 94, 0.4), 0 0 70px rgba(34, 197, 94, 0.2);
+    box-shadow: 0 0 35px rgba(34, 197, 94, 0.35), 0 0 70px rgba(34, 197, 94, 0.15);
     transform: scale(1);
   }
   50% {
-    box-shadow: 0 0 65px rgba(34, 197, 94, 0.7), 0 0 100px rgba(34, 197, 94, 0.4);
+    box-shadow: 0 0 65px rgba(34, 197, 94, 0.6), 0 0 100px rgba(34, 197, 94, 0.3);
     transform: scale(1.02);
   }
 }
 
 @keyframes pulseUnsold {
   0%, 100% {
-    box-shadow: 0 0 35px rgba(239, 68, 68, 0.5), 0 0 70px rgba(245, 158, 11, 0.3);
+    box-shadow: 0 0 35px rgba(239, 68, 68, 0.45), 0 0 70px rgba(245, 215, 127, 0.2);
   }
   50% {
-    box-shadow: 0 0 65px rgba(239, 68, 68, 0.8), 0 0 100px rgba(245, 158, 11, 0.5);
+    box-shadow: 0 0 65px rgba(239, 68, 68, 0.7), 0 0 100px rgba(245, 215, 127, 0.35);
   }
 }
 
@@ -103,18 +111,19 @@ body {
   animation: pulseUnsold 1.5s ease-in-out infinite;
 }
 
-/* Custom Scrollbar - Pure Black & Metallic Gold */
+/* Custom Scrollbar - Midnight Navy & Light Gold */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 7px;
+  height: 7px;
 }
 ::-webkit-scrollbar-track {
-  background: #000000;
+  background: #060c16;
 }
 ::-webkit-scrollbar-thumb {
-  background: #d97706;
+  background: #d4af37;
   border-radius: 9999px;
+  border: 1px solid #0a1322;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #fbbf24;
+  background: #f5d77f;
 }

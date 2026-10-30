@@ -280,7 +280,7 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col justify-between bg-black text-white selection:bg-amber-400 selection:text-black">
+    <div className="min-h-screen flex flex-col justify-between bg-[#060c16] text-white selection:bg-[#f5d77f] selection:text-[#060c16]">
       <div className="flex-1 flex flex-col">
         <ErrorBoundary onReset={handleNavigateHome}>
           {renderView()}

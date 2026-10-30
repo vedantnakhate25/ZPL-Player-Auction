@@ -227,7 +227,7 @@ export function AdminDashboard({
   };
 
   return (
-    <div className="min-h-screen bg-black text-white p-4 sm:p-6 lg:p-8 selection:bg-amber-400 selection:text-black">
+    <div className="min-h-screen bg-[#060c16] text-white p-4 sm:p-6 lg:p-8 selection:bg-[#f5d77f] selection:text-[#060c16]">
       <div className="max-w-7xl mx-auto space-y-8">
         {/* FEEDBACK BANNER */}
         {feedback && (
@@ -249,19 +249,23 @@ export function AdminDashboard({
         )}
 
         {/* TOP BAR */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-zinc-800">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-[#13243f]">
           <div className="flex items-center gap-3.5">
-            <div className="p-3 rounded-2xl bg-zinc-950 border border-amber-500/30 text-amber-400 shadow-xl shadow-black/60 ring-1 ring-amber-400/20">
-              <ShieldCheck className="w-8 h-8 text-amber-400 drop-shadow-[0_0_8px_rgba(245,158,11,0.5)]" />
+            <div className="w-14 h-14 rounded-full bg-[#081220] border-2 border-[#f5d77f]/60 p-1 flex items-center justify-center shadow-xl shadow-[#040811]/90 ring-1 ring-[#f5d77f]/30 shrink-0 overflow-hidden">
+              <img
+                src="/assets/aistudio/file_00000000661882118ee895643705c2c1_2d4830dd.png"
+                alt="ZPL Official Tournament Crest"
+                className="w-full h-full object-contain filter contrast-105"
+              />
             </div>
             <div>
-              <span className="text-xs uppercase font-black tracking-widest text-amber-400">
+              <span className="text-xs uppercase font-black tracking-widest text-[#f5d77f]">
                 Administration Portal
               </span>
               <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
                 ZPL &bull; Zhep Premier League Control Desk
               </h1>
-              <p className="text-xs text-zinc-400 mt-0.5 flex items-center gap-1.5">
+              <p className="text-xs text-[#a1b3cb] mt-0.5 flex items-center gap-1.5">
                 <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
                 <span>Session Active &bull; Authorized Official Desk</span>
               </p>
@@ -271,13 +275,13 @@ export function AdminDashboard({
           <div className="flex items-center gap-3">
             <button
               onClick={onNavigateHome}
-              className="px-4 py-2.5 rounded-xl bg-zinc-900 hover:bg-zinc-800 border border-amber-500/30 text-xs sm:text-sm font-bold text-amber-300 transition-colors shadow-xs cursor-pointer"
+              className="px-4 py-2.5 rounded-xl bg-[#0a1526] hover:bg-[#0e1f38] border border-[#f5d77f]/30 text-xs sm:text-sm font-bold text-[#f5d77f] transition-colors shadow-xs cursor-pointer"
             >
               Public Home
             </button>
             <button
               onClick={handleSignOut}
-              className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-zinc-900 hover:bg-rose-950/60 border border-zinc-800 hover:border-rose-800 text-xs sm:text-sm font-bold text-rose-400 transition-colors shadow-xs cursor-pointer"
+              className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-[#0a1526] hover:bg-rose-950/60 border border-[#13243f] hover:border-rose-800 text-xs sm:text-sm font-bold text-rose-400 transition-colors shadow-xs cursor-pointer"
             >
               <LogOut className="w-4 h-4" />
               <span>Logout</span>
@@ -285,22 +289,22 @@ export function AdminDashboard({
           </div>
         </div>
 
-        {/* QUICK ACTION BANNER (BLACK & METALLIC GOLD) */}
-        <div className="rounded-3xl bg-zinc-950 text-white p-6 sm:p-8 shadow-2xl flex flex-col md:flex-row items-start md:items-center justify-between gap-6 border border-amber-500/30 relative overflow-hidden">
-          <div className="absolute -right-16 -bottom-16 w-64 h-64 rounded-full bg-amber-500/10 blur-3xl pointer-events-none" />
-          <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-amber-400/60 to-transparent" />
+        {/* QUICK ACTION BANNER */}
+        <div className="rounded-3xl bg-[#0a1526] text-white p-6 sm:p-8 shadow-2xl flex flex-col md:flex-row items-start md:items-center justify-between gap-6 border border-[#f5d77f]/30 relative overflow-hidden">
+          <div className="absolute -right-16 -bottom-16 w-64 h-64 rounded-full bg-[#f5d77f]/10 blur-3xl pointer-events-none" />
+          <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-[#f5d77f]/60 to-transparent" />
 
           <div className="space-y-2 max-w-2xl relative z-10">
             <div className="flex items-center gap-2">
-              <Sparkles className="w-5 h-5 text-amber-400" />
-              <span className="text-xs font-black uppercase tracking-wider text-amber-300">
+              <Sparkles className="w-5 h-5 text-[#f5d77f]" />
+              <span className="text-xs font-black uppercase tracking-wider text-[#f5d77f]">
                 Fast Start & Testing Desk
               </span>
             </div>
             <h2 className="text-xl sm:text-2xl font-black text-white">
               Create an Auction or Load Complete Demo Roster
             </h2>
-            <p className="text-sm text-zinc-300 font-medium">
+            <p className="text-sm text-[#c5d3e8] font-medium">
               Create an empty auction to add custom teams & players, or instantly seed a complete Premier League with 4 teams and 8 players to test live bidding and projector mode immediately.
             </p>
           </div>
@@ -309,15 +313,15 @@ export function AdminDashboard({
             <button
               onClick={handleLoadSample}
               disabled={creatingSample}
-              className="w-full sm:w-auto min-h-[44px] flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-black hover:bg-zinc-900 border border-amber-500/30 text-amber-300 font-black text-sm transition-all shadow-md disabled:opacity-50 active:scale-98 cursor-pointer"
+              className="w-full sm:w-auto min-h-[44px] flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-[#081220] hover:bg-[#0e1f38] border border-[#f5d77f]/40 text-[#f5d77f] font-black text-sm transition-all shadow-md disabled:opacity-50 active:scale-98 cursor-pointer"
             >
-              <Sparkles className="w-4 h-4 text-amber-400" />
+              <Sparkles className="w-4 h-4 text-[#f5d77f]" />
               <span>{creatingSample ? 'Loading Demo...' : 'Load Sample Auction'}</span>
             </button>
 
             <button
               onClick={onCreateAuction}
-              className="w-full sm:w-auto min-h-[44px] flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-black font-black text-sm transition-all shadow-lg shadow-amber-500/20 active:scale-98 cursor-pointer"
+              className="w-full sm:w-auto min-h-[44px] flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-[#fae29c] via-[#f5d77f] to-[#e0bc50] hover:from-[#fff0b8] hover:to-[#ebc860] text-[#060c16] font-black text-sm transition-all shadow-lg shadow-amber-900/30 active:scale-98 cursor-pointer"
             >
               <Plus className="w-4 h-4 stroke-[3]" />
               <span>Create New Auction</span>
@@ -329,35 +333,35 @@ export function AdminDashboard({
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <h2 className="text-xl font-black text-white flex items-center gap-2">
-              <span className="w-2.5 h-2.5 rounded-full bg-amber-400" />
+              <span className="w-2.5 h-2.5 rounded-full bg-[#f5d77f]" />
               Existing Auctions ({auctions.length})
             </h2>
           </div>
 
           {loading ? (
             <div className="py-20 text-center">
-              <div className="w-10 h-10 border-4 border-amber-400 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
-              <p className="text-zinc-400 text-sm">Loading auctions...</p>
+              <div className="w-10 h-10 border-4 border-[#f5d77f] border-t-transparent rounded-full animate-spin mx-auto mb-3" />
+              <p className="text-[#a1b3cb] text-sm">Loading auctions...</p>
             </div>
           ) : auctions.length === 0 ? (
-            <div className="rounded-3xl bg-zinc-950 border border-zinc-800 p-12 text-center space-y-4 shadow-xl">
-              <div className="w-16 h-16 rounded-full bg-black border border-amber-500/20 flex items-center justify-center mx-auto text-amber-400">
-                <ShieldCheck className="w-8 h-8 text-amber-400" />
+            <div className="rounded-3xl bg-[#0a1526] border border-[#f5d77f]/25 p-12 text-center space-y-4 shadow-xl">
+              <div className="w-16 h-16 rounded-full bg-[#060c16] border border-[#f5d77f]/30 flex items-center justify-center mx-auto text-[#f5d77f]">
+                <ShieldCheck className="w-8 h-8 text-[#f5d77f]" />
               </div>
               <h3 className="text-xl font-black text-white">No Auctions Created Yet</h3>
-              <p className="text-zinc-400 text-sm max-w-md mx-auto">
+              <p className="text-[#a1b3cb] text-sm max-w-md mx-auto">
                 Get started by creating your first cricket player auction or load the ready-to-test sample auction.
               </p>
               <div className="flex items-center justify-center gap-3 pt-2">
                 <button
                   onClick={handleLoadSample}
-                  className="px-5 py-2.5 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-amber-300 border border-amber-500/30 font-bold text-sm cursor-pointer"
+                  className="px-5 py-2.5 rounded-xl bg-[#0e1f38] hover:bg-[#132948] text-[#f5d77f] border border-[#f5d77f]/30 font-bold text-sm cursor-pointer"
                 >
                   Load Sample
                 </button>
                 <button
                   onClick={onCreateAuction}
-                  className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-black font-black text-sm shadow-md cursor-pointer"
+                  className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-[#fae29c] via-[#f5d77f] to-[#e0bc50] hover:from-[#fff0b8] hover:to-[#ebc860] text-[#060c16] font-black text-sm shadow-md cursor-pointer"
                 >
                   Create New Auction
                 </button>
@@ -368,7 +372,7 @@ export function AdminDashboard({
               {auctions.map((auc) => (
                 <div
                   key={auc.id}
-                  className="rounded-3xl bg-zinc-950 border border-zinc-800 hover:border-amber-400/40 p-5 sm:p-6 shadow-xl hover:shadow-2xl transition-all flex flex-col lg:flex-row lg:items-center justify-between gap-6"
+                  className="rounded-3xl bg-[#0a1526] border border-[#f5d77f]/20 hover:border-[#f5d77f]/50 p-5 sm:p-6 shadow-xl hover:shadow-2xl transition-all flex flex-col lg:flex-row lg:items-center justify-between gap-6"
                 >
                   {/* Auction Details */}
                   <div className="space-y-2">
@@ -378,10 +382,10 @@ export function AdminDashboard({
                           auc.status === 'live'
                             ? 'bg-red-600 text-white animate-pulse'
                             : auc.status === 'paused'
-                            ? 'bg-amber-400 text-black font-black'
+                            ? 'bg-[#f5d77f] text-[#060c16] font-black'
                             : auc.status === 'completed'
                             ? 'bg-emerald-600 text-white'
-                            : 'bg-zinc-900 text-zinc-300 border border-zinc-700'
+                            : 'bg-[#0f1f35] text-[#c5d3e8] border border-[#1b3459]'
                         }`}
                       >
                         {auc.status}
@@ -398,23 +402,23 @@ export function AdminDashboard({
                       {auc.name}
                     </h3>
 
-                    <div className="flex items-center gap-4 text-xs sm:text-sm text-zinc-400">
+                    <div className="flex items-center gap-4 text-xs sm:text-sm text-[#a1b3cb]">
                       <span className="flex items-center gap-1.5">
-                        <Calendar className="w-4 h-4 text-amber-400" />
+                        <Calendar className="w-4 h-4 text-[#f5d77f]" />
                         {auc.date}
                       </span>
                       <span className="flex items-center gap-1.5">
-                        <Clock className="w-4 h-4 text-amber-400" />
+                        <Clock className="w-4 h-4 text-[#f5d77f]" />
                         {auc.time}
                       </span>
                     </div>
                   </div>
 
                   {/* Auction Action Buttons */}
-                  <div className="grid grid-cols-2 sm:flex sm:items-center sm:flex-wrap gap-2 pt-2 lg:pt-0 border-t lg:border-t-0 border-zinc-800">
+                  <div className="grid grid-cols-2 sm:flex sm:items-center sm:flex-wrap gap-2 pt-2 lg:pt-0 border-t lg:border-t-0 border-[#13243f]">
                     <button
                       onClick={() => onOpenControl(auc.id)}
-                      className="col-span-2 sm:col-auto min-h-[44px] flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-black font-black text-xs sm:text-sm transition-all shadow-md shadow-amber-500/20 active:scale-98 cursor-pointer"
+                      className="col-span-2 sm:col-auto min-h-[44px] flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-[#fae29c] via-[#f5d77f] to-[#e0bc50] hover:from-[#fff0b8] hover:to-[#ebc860] text-[#060c16] font-black text-xs sm:text-sm transition-all shadow-md shadow-amber-900/20 active:scale-98 cursor-pointer"
                     >
                       <Radio className="w-4 h-4" />
                       <span>Live Control Desk</span>
@@ -422,34 +426,34 @@ export function AdminDashboard({
 
                     <button
                       onClick={() => onManageTeams(auc.id, auc.name)}
-                      className="min-h-[44px] flex items-center justify-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 text-white font-bold text-xs sm:text-sm transition-colors cursor-pointer"
+                      className="min-h-[44px] flex items-center justify-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-[#0e1f38] hover:bg-[#132948] border border-[#1b3459] text-white font-bold text-xs sm:text-sm transition-colors cursor-pointer"
                     >
-                      <Shield className="w-4 h-4 text-amber-400" />
+                      <Shield className="w-4 h-4 text-[#f5d77f]" />
                       <span>Teams</span>
                     </button>
 
                     <button
                       onClick={() => onManagePlayers(auc.id, auc.name)}
-                      className="min-h-[44px] flex items-center justify-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 text-white font-bold text-xs sm:text-sm transition-colors cursor-pointer"
+                      className="min-h-[44px] flex items-center justify-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-[#0e1f38] hover:bg-[#132948] border border-[#1b3459] text-white font-bold text-xs sm:text-sm transition-colors cursor-pointer"
                     >
-                      <Users className="w-4 h-4 text-amber-400" />
+                      <Users className="w-4 h-4 text-[#f5d77f]" />
                       <span>Players</span>
                     </button>
 
                     <button
                       onClick={() => handleOpenPhotos(auc)}
-                      className="min-h-[44px] flex items-center justify-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 text-white font-bold text-xs sm:text-sm transition-colors cursor-pointer"
+                      className="min-h-[44px] flex items-center justify-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-[#0e1f38] hover:bg-[#132948] border border-[#1b3459] text-white font-bold text-xs sm:text-sm transition-colors cursor-pointer"
                       title="Manage Pre-Auction Photos (Last Year Champions & Team Logos)"
                     >
-                      <ImageIcon className="w-4 h-4 text-amber-400" />
+                      <ImageIcon className="w-4 h-4 text-[#f5d77f]" />
                       <span>Photos ({auc.preAuctionPhotos?.length || 0})</span>
                     </button>
 
                     <button
                       onClick={() => onViewResults(auc.id)}
-                      className="min-h-[44px] flex items-center justify-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 text-white font-bold text-xs sm:text-sm transition-colors cursor-pointer"
+                      className="min-h-[44px] flex items-center justify-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-[#0e1f38] hover:bg-[#132948] border border-[#1b3459] text-white font-bold text-xs sm:text-sm transition-colors cursor-pointer"
                     >
-                      <FileText className="w-4 h-4 text-zinc-400" />
+                      <FileText className="w-4 h-4 text-[#a1b3cb]" />
                       <span>Results</span>
                     </button>
 
@@ -457,7 +461,7 @@ export function AdminDashboard({
                       href={`?auction=${auc.id}`}
                       target="_blank"
                       rel="noreferrer"
-                      className="min-h-[44px] flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 text-amber-400 transition-colors cursor-pointer"
+                      className="min-h-[44px] flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl bg-[#0e1f38] hover:bg-[#132948] border border-[#1b3459] text-[#f5d77f] transition-colors cursor-pointer"
                       title="Open Public Viewer"
                     >
                       <ExternalLink className="w-4 h-4" />
@@ -466,7 +470,7 @@ export function AdminDashboard({
 
                     <button
                       onClick={() => promptDeleteAuction(auc)}
-                      className="min-h-[44px] flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl bg-zinc-900 hover:bg-rose-950/60 border border-zinc-700 hover:border-rose-700 text-rose-400 transition-colors cursor-pointer"
+                      className="min-h-[44px] flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl bg-[#0e1f38] hover:bg-rose-950/60 border border-[#1b3459] hover:border-rose-700 text-rose-400 transition-colors cursor-pointer"
                       title="Delete Auction"
                     >
                       <Trash2 className="w-4 h-4" />
