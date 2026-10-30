@@ -13,6 +13,7 @@ import {
 } from '../lib/firebase';
 import type { Auction, AuctionState, Team, Player, PlayerRole } from '../types/auction';
 import { CelebrationConfetti } from '../components/CelebrationConfetti';
+import { PlayerDecisionPopup } from '../components/PlayerDecisionPopup';
 import { AdminPreAuctionPhotoManager } from '../components/AdminPreAuctionPhotoManager';
 import { useLiveViewers, formatViewerCount } from '../lib/useLiveViewers';
 import {
@@ -566,6 +567,7 @@ export function AdminLiveAuctionControl({
   return (
     <div className="min-h-screen bg-black text-white p-4 sm:p-6 lg:p-8 selection:bg-amber-400 selection:text-black">
       <CelebrationConfetti active={showCelebration} />
+      <PlayerDecisionPopup auctionState={auctionState} teams={teams} />
 
       {/* TOP HEADER */}
       <div className="max-w-7xl mx-auto flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-zinc-800">

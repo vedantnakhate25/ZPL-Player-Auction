@@ -1,7 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import type { Auction, AuctionState, Team, Player } from '../types/auction';
-import { ZPLAuctionStageEmblem } from './ZPLAuctionStageEmblem';
-import { Trophy, Shield, Target, Zap, Award, Sparkles, Check, X, Radio } from 'lucide-react';
+import { Trophy, Shield, Target, Zap, Award, Sparkles, Check, X } from 'lucide-react';
 
 interface ZPLBroadcastPlayerStageProps {
   auction: Auction;
@@ -19,6 +18,7 @@ function ZPLBroadcastPlayerStageComponent({
   isProjectorMode = false,
 }: ZPLBroadcastPlayerStageProps) {
   const [photoError, setPhotoError] = useState(false);
+  const [teamLogoError, setTeamLogoError] = useState(false);
 
   // Current player details
   const playerName = String(auctionState?.currentPlayerName || 'Player on Floor').toUpperCase();
@@ -52,16 +52,8 @@ function ZPLBroadcastPlayerStageComponent({
 
   const holdingTeamLogo = holdingTeam?.logoUrl || auctionState?.winningTeamLogo || '';
 
-  // Total points spent across all teams (memoized)
-  const totalPointsSpent = useMemo(() => {
-    return teams.reduce((sum, team) => {
-      const spent = team.totalSpent ?? Math.max(0, (team.purse || 0) - (team.remainingPurse || 0));
-      return sum + spent;
-    }, 0);
-  }, [teams]);
-
   // Tournament / Auction Title
-  const tournamentTitle = 'ZPL AUCTION 2027';
+  const tournamentTitle = auction.name || 'ZPL AUCTION 2027';
   const organizationTitle = 'ZHEP KRIDA MANDAL';
 
   // Role icon helper
@@ -81,164 +73,151 @@ function ZPLBroadcastPlayerStageComponent({
   };
 
   return (
-    <div className="relative w-full max-w-7xl mx-auto rounded-3xl bg-black border border-amber-500/40 shadow-2xl shadow-black overflow-hidden flex flex-col justify-between selection:bg-amber-400 selection:text-black">
-      {/* 1. TOP STEPPED GEOMETRIC ARENA ARCH (EXACT MATCH TO REFERENCE IMAGE) */}
-      <div className="relative w-full pt-3 sm:pt-5 pb-1 px-2 sm:px-6 flex flex-col items-center">
-        {/* Decorative Arena Stage Stepped Header Border */}
-        <div className="relative w-full max-w-4xl flex items-center justify-center py-2">
-          {/* Stepped Geometric Double-Line Arch with Mathematically Locked Typography */}
+    <div
+      className={`relative w-full max-w-6xl mx-auto rounded-3xl bg-black border border-amber-500/40 shadow-2xl shadow-black overflow-hidden flex flex-col justify-between selection:bg-amber-400 selection:text-black ${
+        isProjectorMode ? 'h-full flex-1 min-h-0' : ''
+      }`}
+    >
+      {/* 1. TOP STEPPED GEOMETRIC ARENA ARCH (BIGGER & HIGH VISIBILITY) */}
+      <div className={`relative w-full ${isProjectorMode ? 'pt-1.5 pb-1' : 'pt-3 sm:pt-5 pb-2'} px-3 sm:px-8 flex flex-col items-center shrink-0`}>
+        <div className={`relative w-full max-w-5xl flex items-center justify-center ${isProjectorMode ? 'py-0.5' : 'py-1 sm:py-2'}`}>
           <svg
-            className="w-full h-auto max-h-32 sm:max-h-36"
-            viewBox="0 0 1000 135"
+            className={`w-full h-auto ${isProjectorMode ? 'max-h-16 sm:max-h-20 md:max-h-24' : 'max-h-22 sm:max-h-28 md:max-h-32'}`}
+            viewBox="0 0 1000 145"
             fill="none"
             xmlns="http://www.w3.org/2000/svg"
           >
-            {/* Gradient definitions */}
             <defs>
+              {/* Crisp Metallic Gold Gradient for Arch */}
               <linearGradient id="goldArchGrad" x1="0%" y1="0%" x2="100%" y2="0%">
                 <stop offset="0%" stopColor="#d97706" />
                 <stop offset="20%" stopColor="#fef08a" />
-                <stop offset="50%" stopColor="#fbbf24" />
+                <stop offset="50%" stopColor="#f59e0b" />
                 <stop offset="80%" stopColor="#fef08a" />
                 <stop offset="100%" stopColor="#d97706" />
               </linearGradient>
 
-              {/* High-shine gold text fill */}
+              {/* Razor-Sharp Championship Gold Gradient for Text */}
               <linearGradient id="goldTextGrad" x1="0%" y1="0%" x2="0%" y2="100%">
                 <stop offset="0%" stopColor="#ffffff" />
-                <stop offset="25%" stopColor="#fef08a" />
-                <stop offset="65%" stopColor="#fbbf24" />
-                <stop offset="100%" stopColor="#d97706" />
+                <stop offset="22%" stopColor="#fffbeb" />
+                <stop offset="50%" stopColor="#fde047" />
+                <stop offset="78%" stopColor="#f59e0b" />
+                <stop offset="100%" stopColor="#b45309" />
               </linearGradient>
 
-              {/* Glowing filter */}
-              <filter id="goldHeaderGlow" x="-20%" y="-20%" width="140%" height="140%">
-                <feGaussianBlur stdDeviation="3.5" result="blur" />
-                <feMerge>
-                  <feMergeNode in="blur" />
-                  <feMergeNode in="SourceGraphic" />
-                </feMerge>
+              {/* Crisp Drop Shadow Filter (sharp edge, no blurry halo) */}
+              <filter id="crispHeaderShadow" x="-10%" y="-10%" width="120%" height="130%">
+                <feDropShadow dx="0" dy="2.5" stdDeviation="1" floodColor="#000000" floodOpacity="0.95" />
               </filter>
-
-              {/* Central Warm Ambient Aura */}
-              <radialGradient id="headerCenterAura" cx="50%" cy="50%" r="50%">
-                <stop offset="0%" stopColor="#fbbf24" stopOpacity="0.25" />
-                <stop offset="60%" stopColor="#d97706" stopOpacity="0.08" />
-                <stop offset="100%" stopColor="#000000" stopOpacity="0" />
-              </radialGradient>
             </defs>
 
-            {/* Ambient Background Aura behind Title */}
-            <ellipse cx="500" cy="70" rx="360" ry="46" fill="url(#headerCenterAura)" />
-
-            {/* Outer Stepped Frame: Clean horizontal ceiling spanning over title with ample gap */}
+            {/* Stepped Geometric Circuit Arch Path (Clean, Crisp & Sharp) */}
             <path
-              d="M 30 118 L 90 118 L 90 76 L 150 76 L 150 16 L 850 16 L 850 76 L 910 76 L 910 118 L 970 118"
+              d="M 20 128 L 80 128 L 80 82 L 140 82 L 140 14 L 860 14 L 860 82 L 920 82 L 920 128 L 980 128"
               stroke="url(#goldArchGrad)"
-              strokeWidth="3.2"
-              strokeLinecap="square"
+              strokeWidth="3.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
             />
 
-            {/* Symmetrically Aligned Gold Corner Rivets / Illuminated Bulbs */}
-            {/* Top Ceiling Corners */}
-            <circle cx="150" cy="16" r="3.5" fill="#fef08a" stroke="#d97706" strokeWidth="1" filter="url(#goldHeaderGlow)" />
-            <circle cx="850" cy="16" r="3.5" fill="#fef08a" stroke="#d97706" strokeWidth="1" filter="url(#goldHeaderGlow)" />
+            {/* Corner Node Rivets (Crisp Dual-Tone Pins) */}
+            <circle cx="140" cy="14" r="5" fill="#fef08a" stroke="#78350f" strokeWidth="2" />
+            <circle cx="140" cy="14" r="2" fill="#ffffff" />
+            <circle cx="860" cy="14" r="5" fill="#fef08a" stroke="#78350f" strokeWidth="2" />
+            <circle cx="860" cy="14" r="2" fill="#ffffff" />
 
-            {/* Upper Step Corners */}
-            <circle cx="150" cy="76" r="3" fill="#fbbf24" stroke="#b45309" strokeWidth="1" />
-            <circle cx="850" cy="76" r="3" fill="#fbbf24" stroke="#b45309" strokeWidth="1" />
+            <circle cx="140" cy="82" r="4.5" fill="#fbbf24" stroke="#78350f" strokeWidth="1.5" />
+            <circle cx="860" cy="82" r="4.5" fill="#fbbf24" stroke="#78350f" strokeWidth="1.5" />
+            <circle cx="80" cy="82" r="4.5" fill="#fbbf24" stroke="#78350f" strokeWidth="1.5" />
+            <circle cx="920" cy="82" r="4.5" fill="#fbbf24" stroke="#78350f" strokeWidth="1.5" />
+            <circle cx="80" cy="128" r="4" fill="#f59e0b" stroke="#78350f" strokeWidth="1.5" />
+            <circle cx="920" cy="128" r="4" fill="#f59e0b" stroke="#78350f" strokeWidth="1.5" />
+            <circle cx="20" cy="128" r="3.5" fill="#d97706" />
+            <circle cx="980" cy="128" r="3.5" fill="#d97706" />
 
-            {/* Middle Step Corners */}
-            <circle cx="90" cy="76" r="3" fill="#fbbf24" stroke="#b45309" strokeWidth="1" />
-            <circle cx="910" cy="76" r="3" fill="#fbbf24" stroke="#b45309" strokeWidth="1" />
-
-            {/* Lower Step Corners */}
-            <circle cx="90" cy="118" r="3" fill="#f59e0b" stroke="#78350f" strokeWidth="1" />
-            <circle cx="910" cy="118" r="3" fill="#f59e0b" stroke="#78350f" strokeWidth="1" />
-
-            {/* Terminal Base End Points */}
-            <circle cx="30" cy="118" r="3" fill="#d97706" />
-            <circle cx="970" cy="118" r="3" fill="#d97706" />
-
-            {/* MAIN TOURNAMENT TITLE: ZPL AUCTION 2027 (Generous top clearance) */}
+            {/* Main Tournament / League Title (Razor-Sharp, Bold & Crisp Contrast) */}
             <text
               x="500"
               y="74"
               textAnchor="middle"
               fill="url(#goldTextGrad)"
-              fontSize="38"
+              stroke="#000000"
+              strokeWidth="2"
+              paintOrder="stroke fill"
+              fontSize="54"
               fontWeight="900"
-              letterSpacing="5"
-              fontFamily="Georgia, Cambria, 'Times New Roman', Times, serif"
-              filter="url(#goldHeaderGlow)"
+              letterSpacing="6"
+              fontFamily="system-ui, -apple-system, BlinkMacSystemFont, 'Montserrat', 'Segoe UI', Roboto, 'Arial Black', sans-serif"
+              filter="url(#crispHeaderShadow)"
             >
               {tournamentTitle}
             </text>
 
-            {/* SUBTITLE: ZHEP KRIDA MANDAL (Spaced comfortably below the title) */}
+            {/* Organization Subtitle (Clean, Crisp & High Contrast) */}
             <text
               x="500"
-              y="106"
+              y="112"
               textAnchor="middle"
-              fill="#fbbf24"
-              fontSize="13"
+              fill="#fef08a"
+              stroke="#000000"
+              strokeWidth="1"
+              paintOrder="stroke fill"
+              fontSize="18"
               fontWeight="900"
-              letterSpacing="6"
-              fontFamily="system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif"
-              opacity="0.95"
+              letterSpacing="7"
+              fontFamily="system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
             >
               {organizationTitle}
             </text>
           </svg>
         </div>
-
-        {/* Ambient Top Light Beam Glows */}
-        <div className="absolute top-0 left-1/4 w-72 h-32 bg-amber-500/10 blur-3xl pointer-events-none" />
-        <div className="absolute top-0 right-1/4 w-72 h-32 bg-amber-500/10 blur-3xl pointer-events-none" />
       </div>
 
-      {/* 2. MAIN BROADCAST SCREEN ARENA (LEFT: PLAYER PROFILE | CENTER: STAGE EMBLEM & PODIUM | RIGHT: PURSE REMAINING) */}
-      <div className="relative px-2 sm:px-6 py-2 sm:py-4 grid grid-cols-1 lg:grid-cols-12 gap-4 lg:gap-6 items-center">
+      {/* 2. MAIN BROADCAST SCREEN ARENA */}
+      <div className={`relative px-2 sm:px-4 md:px-6 ${isProjectorMode ? 'py-1 gap-1.5 flex-1 min-h-0 justify-between' : 'py-3 sm:py-4 gap-3 sm:gap-4'} flex flex-col w-full max-w-5xl mx-auto`}>
         
         {/* ======================================================== */}
-        {/* LEFT COLUMN: PLAYER PROFILE BROADCAST CARD */}
+        {/* TOP SECTION: PLAYER PROFILE BROADCAST CARD (BIG & PROMINENT) */}
         {/* ======================================================== */}
-        <div className="lg:col-span-5 w-full flex flex-col justify-center">
-          <div className="relative w-full rounded-2xl bg-gradient-to-b from-zinc-900/95 via-zinc-950/95 to-black border-2 border-cyan-500/40 shadow-2xl shadow-cyan-950/30 overflow-hidden backdrop-blur-md">
+        <div className={`w-full ${isProjectorMode ? 'flex-[1.5] min-h-0 flex flex-col' : ''}`}>
+          <div className={`relative w-full rounded-2xl bg-gradient-to-b from-zinc-900/95 via-zinc-950/95 to-black border-2 border-cyan-500/50 shadow-2xl overflow-hidden backdrop-blur-md ${isProjectorMode ? 'h-full flex flex-col justify-between' : ''}`}>
             
-            {/* Top Cyan / Gold Header Bar */}
-            <div className="px-3 sm:px-4 py-2 bg-gradient-to-r from-cyan-950 via-zinc-900 to-cyan-950 border-b border-cyan-500/40 flex items-center justify-between">
+            {/* Top Header Bar */}
+            <div className={`px-3 sm:px-4 ${isProjectorMode ? 'py-1 sm:py-1.5' : 'py-2 sm:py-2.5'} bg-gradient-to-r from-cyan-950 via-zinc-900 to-cyan-950 border-b border-cyan-500/40 flex items-center justify-between shrink-0`}>
               <div className="flex items-center gap-2">
-                <div className="w-5 h-5 rounded-md bg-gradient-to-tr from-amber-500 to-yellow-300 flex items-center justify-center font-black text-[9px] text-black shadow-xs">
+                <div className={`${isProjectorMode ? 'w-5 h-5 text-[9px]' : 'w-6 h-6 text-[10px]'} rounded-md bg-gradient-to-tr from-amber-500 to-yellow-300 flex items-center justify-center font-black text-black shadow-xs`}>
                   ZPL
                 </div>
                 <div className="leading-tight">
-                  <span className="text-[10px] sm:text-[11px] font-black tracking-wider uppercase text-white block">
+                  <span className={`${isProjectorMode ? 'text-[11px] sm:text-xs' : 'text-xs sm:text-sm'} font-black tracking-wider uppercase text-white block`}>
                     {tournamentTitle}
                   </span>
-                  <span className="text-[9px] font-bold text-cyan-400 uppercase tracking-widest">
+                  <span className={`${isProjectorMode ? 'text-[9px]' : 'text-[10px] sm:text-xs'} font-bold text-cyan-400 uppercase tracking-widest`}>
                     PLAYER PROFILE
                   </span>
                 </div>
               </div>
 
               {/* Status pill */}
-              <div className="flex items-center gap-1">
+              <div className="flex items-center gap-1.5">
                 {auctionState?.status === 'paused' ? (
-                  <span className="px-2.5 py-0.5 rounded-full bg-amber-400 text-black text-[10px] font-black uppercase tracking-wider animate-pulse flex items-center gap-1 shadow-sm">
+                  <span className={`${isProjectorMode ? 'px-2 py-0.5 text-[10px]' : 'px-3 py-1 text-xs'} rounded-full bg-amber-400 text-black font-black uppercase tracking-wider animate-pulse flex items-center gap-1 shadow-sm`}>
                     <span className="w-1.5 h-1.5 rounded-full bg-black" />
                     PAUSED
                   </span>
                 ) : isSold ? (
-                  <span className="px-2 py-0.5 rounded-full bg-emerald-500 text-black text-[10px] font-black uppercase tracking-wider animate-pulse">
+                  <span className={`${isProjectorMode ? 'px-2.5 py-0.5 text-[10px]' : 'px-3 py-1 text-xs'} rounded-full bg-emerald-500 text-black font-black uppercase tracking-wider flex items-center gap-1 shadow-sm`}>
+                    <Check className="w-3.5 h-3.5 stroke-[3.5]" />
                     SOLD
                   </span>
                 ) : isUnsold ? (
-                  <span className="px-2 py-0.5 rounded-full bg-rose-600 text-white text-[10px] font-black uppercase tracking-wider animate-pulse">
+                  <span className={`${isProjectorMode ? 'px-2.5 py-0.5 text-[10px]' : 'px-3 py-1 text-xs'} rounded-full bg-rose-600 text-white font-black uppercase tracking-wider flex items-center gap-1 shadow-sm`}>
+                    <X className="w-3.5 h-3.5 stroke-[3.5]" />
                     UNSOLD
                   </span>
                 ) : (
-                  <span className="px-2 py-0.5 rounded-full bg-cyan-500/20 border border-cyan-400/60 text-cyan-300 text-[10px] font-bold uppercase tracking-wider flex items-center gap-1">
+                  <span className={`${isProjectorMode ? 'px-2.5 py-0.5 text-[10px]' : 'px-3 py-1 text-xs'} rounded-full bg-cyan-500/20 border border-cyan-400/60 text-cyan-300 font-bold uppercase tracking-wider flex items-center gap-1`}>
                     <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-ping" />
                     IN AUCTION
                   </span>
@@ -246,210 +225,186 @@ function ZPLBroadcastPlayerStageComponent({
               </div>
             </div>
 
-            {/* Player Name & Nationality / League Bar */}
-            <div className="px-4 pt-3 pb-2 bg-gradient-to-r from-cyan-900/30 via-zinc-900 to-cyan-900/30 border-b border-zinc-800">
-              <div className="flex items-baseline justify-between gap-2">
-                <h2 className="text-xl sm:text-2xl md:text-3xl font-black text-white uppercase tracking-wide truncate drop-shadow-md">
-                  {playerName}
-                </h2>
-                <span className="text-xs sm:text-sm font-black text-amber-400 uppercase tracking-wider shrink-0 flex items-center gap-1">
-                  {getRoleIcon()}
-                  {playerRole}
-                </span>
-              </div>
-              <div className="flex items-center gap-2 mt-0.5 text-[10px] sm:text-[11px] text-cyan-300 font-bold uppercase tracking-wider">
-                <span>{organizationTitle}</span>
-                <span>&bull;</span>
-                <span>{auctionState?.round === 'unsold' ? 'Unsold Round' : 'Regular Pool'}</span>
-              </div>
-            </div>
-
-            {/* Profile Center Body: Octagonal Photo on Left + Stats Table on Right */}
-            <div className="p-3 sm:p-4 grid grid-cols-12 gap-3 sm:gap-4 items-center">
-              {/* Octagonal Glowing Player Frame */}
-              <div className="col-span-5 sm:col-span-5 flex flex-col items-center justify-center">
-                <div className="relative w-28 h-28 sm:w-36 sm:h-36 flex items-center justify-center">
-                  {/* Glowing Outer Hexagon / Bezel */}
-                  <div className="absolute inset-0 rounded-2xl bg-gradient-to-b from-cyan-400 via-amber-400 to-cyan-500 p-[2.5px] shadow-lg shadow-cyan-500/20 transform rotate-1">
-                    <div className="w-full h-full rounded-2xl bg-black overflow-hidden flex items-center justify-center">
-                      {playerPhoto && !photoError ? (
-                        <img
-                          src={playerPhoto}
-                          alt={playerName}
-                          onError={() => setPhotoError(true)}
-                          className="w-full h-full object-cover object-top"
-                        />
-                      ) : (
-                        <div className="w-full h-full flex flex-col items-center justify-center bg-zinc-900 text-zinc-500 p-2 text-center">
-                          <Trophy className="w-8 h-8 text-amber-400/60 mb-1" />
-                          <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">
-                            ZPL CRICKET
-                          </span>
-                        </div>
-                      )}
-                    </div>
+            {/* Main Player Body: Photo strictly on Left, ALL Details strictly on Right */}
+            <div className={`p-3 sm:p-4 md:p-5 ${isProjectorMode ? 'py-2 gap-3 sm:gap-4 flex-1 min-h-0' : 'gap-3 sm:gap-5 md:gap-6'} flex flex-row items-center`}>
+              
+              {/* Photo on Left Side (Bigger, Prominent & Framed with Glowing Rivets) */}
+              <div className="shrink-0 flex items-center justify-center">
+                <div className={`relative ${
+                  isProjectorMode
+                    ? 'w-36 h-36 xs:w-40 xs:h-40 sm:w-48 sm:h-48 md:w-56 md:h-56 lg:w-60 lg:h-60 xl:w-64 xl:h-64'
+                    : 'w-36 h-36 xs:w-44 xs:h-44 sm:w-56 sm:h-56 md:w-64 md:h-64 lg:w-72 lg:h-72 xl:w-80 xl:h-80'
+                } rounded-2xl bg-gradient-to-b from-cyan-400 via-amber-400 to-cyan-500 p-[3px] shadow-2xl shadow-cyan-500/25`}>
+                  <div className="w-full h-full rounded-[13px] bg-black overflow-hidden flex items-center justify-center">
+                    {playerPhoto && !photoError ? (
+                      <img
+                        src={playerPhoto}
+                        alt={playerName}
+                        onError={() => setPhotoError(true)}
+                        className="w-full h-full object-cover object-top"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex flex-col items-center justify-center bg-zinc-900 text-zinc-500 p-2 text-center">
+                        <Trophy className={`${isProjectorMode ? 'w-10 h-10' : 'w-14 h-14'} text-amber-400/60 mb-1`} />
+                        <span className="text-[10px] font-black uppercase tracking-wider text-zinc-400">
+                          ZPL CRICKET
+                        </span>
+                      </div>
+                    )}
                   </div>
-
-                  {/* Corner Accent Dots */}
-                  <div className="absolute -top-1 -left-1 w-2.5 h-2.5 rounded-full bg-cyan-400 shadow-sm shadow-cyan-400" />
-                  <div className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-cyan-400 shadow-sm shadow-cyan-400" />
-                  <div className="absolute -bottom-1 -left-1 w-2.5 h-2.5 rounded-full bg-amber-400 shadow-sm shadow-amber-400" />
-                  <div className="absolute -bottom-1 -right-1 w-2.5 h-2.5 rounded-full bg-amber-400 shadow-sm shadow-amber-400" />
+                  {/* Crisp Corner Rivets (High-contrast, clean & sharp) */}
+                  <div className="absolute -top-1.5 -left-1.5 w-3.5 h-3.5 sm:w-4 sm:h-4 rounded-full bg-cyan-400 border-2 border-black shadow-sm" />
+                  <div className="absolute -top-1.5 -right-1.5 w-3.5 h-3.5 sm:w-4 sm:h-4 rounded-full bg-cyan-400 border-2 border-black shadow-sm" />
+                  <div className="absolute -bottom-1.5 -left-1.5 w-3.5 h-3.5 sm:w-4 sm:h-4 rounded-full bg-amber-400 border-2 border-black shadow-sm" />
+                  <div className="absolute -bottom-1.5 -right-1.5 w-3.5 h-3.5 sm:w-4 sm:h-4 rounded-full bg-amber-400 border-2 border-black shadow-sm" />
                 </div>
               </div>
 
-              {/* Broadcast Stats Grid (Matching IPL TV Screen) */}
-              <div className="col-span-7 sm:col-span-7 flex flex-col justify-center space-y-2">
-                <div className="rounded-xl overflow-hidden border border-zinc-700 bg-zinc-950/80 text-xs">
-                  {/* Row 1: League & Role */}
-                  <div className="grid grid-cols-3 bg-zinc-900/90 border-b border-zinc-800 text-[10px] font-black uppercase text-zinc-400 text-center py-1">
-                    <span>LEAGUE</span>
-                    <span className="border-x border-zinc-800">ROLE</span>
-                    <span>POOL</span>
-                  </div>
-                  <div className="grid grid-cols-3 text-[11px] font-bold text-white text-center py-1.5 bg-black/60">
-                    <span className="text-amber-400 font-black">ZPL</span>
-                    <span className="border-x border-zinc-800 text-zinc-200 truncate px-1">
+              {/* ALL Details on Right Side */}
+              <div className="flex-1 min-w-0 flex flex-col justify-center space-y-1.5 sm:space-y-2.5 text-left">
+                {/* 1. Name & Role */}
+                <div>
+                  <div className="flex flex-wrap items-center justify-between gap-1.5 sm:gap-2">
+                    <h2 className={`${
+                      isProjectorMode
+                        ? 'text-lg sm:text-2xl md:text-3xl'
+                        : 'text-xl sm:text-3xl md:text-4xl'
+                    } font-black text-white uppercase tracking-tight break-words leading-none`}>
+                      {playerName}
+                    </h2>
+                    <span className={`${
+                      isProjectorMode
+                        ? 'text-[10px] sm:text-xs px-2 py-0.5'
+                        : 'text-xs sm:text-sm px-2.5 sm:px-3 py-1'
+                    } font-black text-amber-300 uppercase tracking-wider inline-flex items-center gap-1.5 rounded-xl bg-amber-400/10 border border-amber-400/30 shrink-0`}>
+                      {getRoleIcon()}
                       {playerRole}
                     </span>
-                    <span className="text-zinc-300 truncate px-1">
-                      {auctionState?.round === 'unsold'
-                        ? 'Unsold'
-                        : auctionState?.currentPlayerSlotName
-                        ? auctionState.currentPlayerSlotName
-                        : auctionState?.currentPlayerSlotNumber
-                        ? `Slot ${auctionState.currentPlayerSlotNumber}`
-                        : 'Slot 1'}
-                    </span>
                   </div>
-
-                  {/* Row 2: Base Points & Current Leader */}
-                  <div className="grid grid-cols-2 bg-zinc-900/90 border-t border-b border-zinc-800 text-[10px] font-black uppercase text-zinc-400 text-center py-1">
-                    <span>BASE PRICE</span>
-                    <span className="border-l border-zinc-800">STATUS</span>
-                  </div>
-                  <div className="grid grid-cols-2 text-[11px] font-bold text-center py-1.5 bg-black/60">
-                    <span className="text-white font-black">{basePoints} PTS</span>
-                    <span
-                      className={`border-l border-zinc-800 font-black ${
-                        isSold
-                          ? 'text-emerald-400'
-                          : isUnsold
-                          ? 'text-rose-400'
-                          : isBiddingActive
-                          ? 'text-amber-400'
-                          : 'text-cyan-400'
-                      }`}
-                    >
-                      {isSold
-                        ? 'SOLD'
-                        : isUnsold
-                        ? 'UNSOLD'
-                        : isBiddingActive
-                        ? 'BIDDING'
-                        : 'ON FLOOR'}
+                  
+                  {/* Subtitle / Organization */}
+                  <div className="flex items-center gap-1.5 mt-0.5 text-[9px] sm:text-xs text-cyan-300 font-bold uppercase tracking-wider">
+                    <span>{organizationTitle}</span>
+                    <span>&bull;</span>
+                    <span className="text-zinc-300">
+                      {auctionState?.round === 'unsold' ? 'Unsold Round' : 'Regular Pool'}
                     </span>
                   </div>
                 </div>
 
-                {/* Highest Bidder Indicator (if any) */}
-                {auctionState?.winningTeamName && (
-                  <div className="px-2.5 py-1 rounded-xl bg-amber-500/10 border border-amber-500/40 flex items-center justify-between text-[11px]">
-                    <span className="text-zinc-400 font-bold uppercase text-[9px]">
-                      {isSold ? 'Sold To:' : 'Leading Bid:'}
+                {/* 2. Broadcast Metrics Row (Base Price | Pool / Slot | Current/Final Price) */}
+                <div className="grid grid-cols-3 gap-1.5 sm:gap-2.5 rounded-xl bg-zinc-950/95 border border-zinc-800 p-2 sm:p-2.5 text-center shadow-md">
+                  <div className="border-r border-zinc-800/80 pr-1">
+                    <span className="text-[9px] sm:text-[10px] md:text-xs font-bold uppercase tracking-wider text-zinc-400 block mb-0.5">
+                      Base Price
                     </span>
-                    <span className="font-black text-amber-300 truncate max-w-[130px] uppercase">
-                      {auctionState.winningTeamName}
+                    <span className={`${isProjectorMode ? 'text-xs sm:text-sm md:text-base' : 'text-sm sm:text-base md:text-lg lg:text-xl'} font-black text-white tracking-tight`}>
+                      {basePoints} <span className="text-[9px] sm:text-xs text-zinc-400 font-bold">PTS</span>
+                    </span>
+                  </div>
+
+                  <div className="border-r border-zinc-800/80 pr-1">
+                    <span className="text-[9px] sm:text-[10px] md:text-xs font-bold uppercase tracking-wider text-zinc-400 block mb-0.5">
+                      Pool / Slot
+                    </span>
+                    <span className={`${isProjectorMode ? 'text-xs sm:text-sm md:text-base' : 'text-sm sm:text-base md:text-lg lg:text-xl'} font-black text-cyan-400 truncate block tracking-tight`}>
+                      {auctionState?.round === 'unsold'
+                        ? 'Unsold'
+                        : auctionState?.currentPlayerSlotName ||
+                          (auctionState?.currentPlayerSlotNumber ? `Slot ${auctionState.currentPlayerSlotNumber}` : 'Slot 1')}
+                    </span>
+                  </div>
+
+                  <div>
+                    <span className="text-[9px] sm:text-[10px] md:text-xs font-bold uppercase tracking-wider text-zinc-400 block mb-0.5">
+                      {isSold ? 'Final Price' : isBiddingActive ? 'Current Bid' : 'Starting Bid'}
+                    </span>
+                    <span className={`${
+                      isProjectorMode ? 'text-xs sm:text-sm md:text-base' : 'text-sm sm:text-base md:text-lg lg:text-xl'
+                    } font-black tracking-tight ${isSold ? 'text-emerald-400' : isUnsold ? 'text-rose-400' : 'text-amber-400'}`}>
+                      ₹ {currentBid} <span className="text-[9px] sm:text-xs font-bold uppercase">PTS</span>
+                    </span>
+                  </div>
+                </div>
+
+                {/* 3. Live Sale / Bid Outcome Strip */}
+                {isSold ? (
+                  <div className="rounded-xl bg-gradient-to-r from-emerald-500/15 via-emerald-500/25 to-emerald-500/15 border border-emerald-500/40 px-3 py-1.5 flex items-center justify-between shadow-sm">
+                    <span className="text-[10px] sm:text-xs md:text-sm font-bold text-zinc-300 uppercase tracking-wider flex items-center gap-1.5">
+                      <span className="w-2 h-2 rounded-full bg-emerald-400" />
+                      Sold To: <strong className="text-white font-black">{holdingTeam?.name || 'Winning Franchise'}</strong>
+                    </span>
+                    <span className="text-xs sm:text-sm md:text-base font-black text-emerald-400 uppercase tracking-wide">
+                      ₹ {currentBid} PTS
+                    </span>
+                  </div>
+                ) : isUnsold ? (
+                  <div className="rounded-xl bg-rose-500/15 border border-rose-500/40 px-3 py-1.5 flex items-center justify-between shadow-sm">
+                    <span className="text-[10px] sm:text-xs md:text-sm font-bold text-rose-300 uppercase tracking-wider flex items-center gap-1.5">
+                      <span className="w-2 h-2 rounded-full bg-rose-400" />
+                      Status: Player Unsold
+                    </span>
+                    <span className="text-[10px] sm:text-xs font-bold text-zinc-400 uppercase">
+                      Unsold Pool
+                    </span>
+                  </div>
+                ) : isBiddingActive ? (
+                  <div className="rounded-xl bg-amber-500/15 border border-amber-500/40 px-3 py-1.5 flex items-center justify-between shadow-sm">
+                    <span className="text-[10px] sm:text-xs md:text-sm font-bold text-amber-200 uppercase tracking-wider flex items-center gap-1.5 truncate mr-2">
+                      <span className="w-2 h-2 rounded-full bg-amber-400 animate-ping" />
+                      Top Bidder: <strong className="text-white font-black truncate">{holdingTeam?.name || 'Holding Team'}</strong>
+                    </span>
+                    <span className="text-xs sm:text-sm md:text-base font-black text-amber-300 uppercase shrink-0">
+                      ₹ {currentBid} PTS
+                    </span>
+                  </div>
+                ) : (
+                  <div className="rounded-xl bg-zinc-950/80 border border-zinc-800 px-3 py-1.5 flex items-center justify-between shadow-sm">
+                    <span className="text-[10px] sm:text-xs md:text-sm font-bold text-zinc-400 uppercase tracking-wider">
+                      Ready For Bidding
+                    </span>
+                    <span className="text-xs sm:text-sm font-black text-amber-400 uppercase">
+                      Base: {basePoints} PTS
                     </span>
                   </div>
                 )}
+
               </div>
-            </div>
 
-            {/* Bottom Metallic Beveled Price Plaque (Exact Match to Broadcast Lower Plaque) */}
-            <div className="px-3 sm:px-4 pb-3 sm:pb-4 pt-1">
-              <div className="w-full rounded-xl bg-gradient-to-r from-zinc-200 via-white to-zinc-200 p-[2px] shadow-xl">
-                <div className="w-full rounded-[10px] bg-gradient-to-r from-zinc-950 via-black to-zinc-950 flex items-stretch overflow-hidden">
-                  {/* Left Box: Currency & Points */}
-                  <div className="px-4 py-2 sm:py-2.5 bg-gradient-to-r from-amber-400 to-yellow-300 text-black font-black flex items-center gap-1.5 shadow-md">
-                    <span className="text-base sm:text-xl font-serif">₹</span>
-                    <span className="text-lg sm:text-2xl font-black tracking-tight">
-                      {currentBid} <span className="text-xs sm:text-sm font-bold uppercase">PTS</span>
-                    </span>
-                  </div>
-
-                  {/* Right Box: Base Price / Current Bid Label */}
-                  <div className="flex-1 px-3 sm:px-4 py-2 flex items-center justify-between bg-zinc-900/90 text-white">
-                    <div>
-                      <span className="text-[10px] sm:text-xs font-black uppercase tracking-wider text-zinc-300 block">
-                        {isSold
-                          ? 'FINAL SALE PRICE'
-                          : isBiddingActive
-                          ? 'CURRENT HIGHEST BID'
-                          : 'BASE PRICE'}
-                      </span>
-                      {auctionState?.winningTeamName && (
-                        <span className="text-[10px] font-bold text-amber-400 truncate block uppercase">
-                          Team: {auctionState.winningTeamName}
-                        </span>
-                      )}
-                    </div>
-
-                    <div className="flex items-center gap-1">
-                      {isSold ? (
-                        <div className="w-6 h-6 rounded-full bg-emerald-500 text-black flex items-center justify-center font-black">
-                          <Check className="w-3.5 h-3.5 stroke-[3]" />
-                        </div>
-                      ) : isUnsold ? (
-                        <div className="w-6 h-6 rounded-full bg-rose-600 text-white flex items-center justify-center font-black">
-                          <X className="w-3.5 h-3.5 stroke-[3]" />
-                        </div>
-                      ) : (
-                        <span className="w-2.5 h-2.5 rounded-full bg-amber-400 animate-ping" />
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </div>
             </div>
 
           </div>
         </div>
 
         {/* ======================================================== */}
-        {/* CENTER COLUMN: STAGE EMBLEM BACKDROP + PODIUM & LOWER-THIRD TICKER */}
+        {/* CENTER STAGE CONNECTOR (SLEEK, CLEAN & PROPORTIONAL) */}
         {/* ======================================================== */}
-        <div className="lg:col-span-2 hidden lg:flex flex-col items-center justify-center text-center relative">
-          {/* Glowing Gavel Wheel Emblem in Center Backdrop */}
-          <div className="relative w-44 h-44 sm:w-48 sm:h-48 transform scale-90 sm:scale-100 drop-shadow-[0_0_20px_rgba(245,158,11,0.4)]">
-            <ZPLAuctionStageEmblem size={190} />
+        <div className={`w-full flex items-center justify-center relative shrink-0 ${isProjectorMode ? 'my-0' : 'my-0.5'}`}>
+          <div className="h-[1px] flex-1 bg-gradient-to-r from-transparent via-amber-500/30 to-amber-500/70" />
+          <div className={`mx-2 sm:mx-3 flex items-center gap-1.5 ${isProjectorMode ? 'px-2 py-0.5 text-[8px]' : 'px-3 py-0.5 sm:py-1 text-[9px] sm:text-[11px]'} rounded-full bg-zinc-950 border border-amber-500/40 text-amber-300 font-black uppercase tracking-widest shadow-md shrink-0`}>
+            <Trophy className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-amber-400" />
+            <span>{isSold ? 'OFFICIAL ACQUISITION' : 'FRANCHISE ARENA'}</span>
           </div>
-
-          {/* Auctioneer Trophy Cup */}
-          <div className="relative -mt-4 flex flex-col items-center drop-shadow-2xl">
-            <div className="p-2 rounded-xl bg-gradient-to-t from-amber-600 to-yellow-300 text-black shadow-lg shadow-amber-500/40 ring-1 ring-white/50">
-              <Trophy className="w-5 h-5 text-black" />
-            </div>
-          </div>
+          <div className="h-[1px] flex-1 bg-gradient-to-l from-transparent via-amber-500/30 to-amber-500/70" />
         </div>
 
         {/* ======================================================== */}
-        {/* RIGHT COLUMN: CURRENT LEADING BID TEAM CARD (LOGO, NAME, HIGHEST BID) */}
+        {/* BOTTOM SECTION: TEAM DETAILS (LITTLE SMALL & COMPACT) */}
         {/* ======================================================== */}
-        <div className="lg:col-span-5 w-full flex flex-col justify-center">
-          <div className="relative w-full rounded-2xl bg-gradient-to-b from-zinc-900/95 via-zinc-950/95 to-black border-2 border-amber-500/50 shadow-2xl shadow-amber-950/30 overflow-hidden backdrop-blur-md">
+        <div className={`w-full ${isProjectorMode ? 'flex-[0.9] min-h-0 flex flex-col' : ''}`}>
+          <div className={`relative w-full rounded-2xl bg-gradient-to-b from-zinc-900/95 via-zinc-950/95 to-black border-2 border-amber-500/40 shadow-xl overflow-hidden backdrop-blur-md ${isProjectorMode ? 'h-full flex flex-col justify-between' : ''}`}>
             
-            {/* Top Gold / Amber Header Bar */}
-            <div className="px-3 sm:px-4 py-2 bg-gradient-to-r from-amber-950/80 via-zinc-900 to-amber-950/80 border-b border-amber-500/40 flex items-center justify-between">
+            {/* Top Header Bar (Slimmer) */}
+            <div className={`px-3 sm:px-4 ${isProjectorMode ? 'py-0.5 sm:py-1' : 'py-1.5 sm:py-2'} bg-gradient-to-r from-amber-950/80 via-zinc-900 to-amber-950/80 border-b border-amber-500/40 flex items-center justify-between shrink-0`}>
               <div className="flex items-center gap-2">
-                <div className="w-5 h-5 rounded-md bg-gradient-to-tr from-amber-500 to-yellow-300 flex items-center justify-center font-black text-[9px] text-black shadow-xs">
+                <div className={`${isProjectorMode ? 'w-4 h-4 text-[8px]' : 'w-5 h-5 text-[9px]'} rounded-md bg-gradient-to-tr from-amber-500 to-yellow-300 flex items-center justify-center font-black text-black shadow-xs`}>
                   ZPL
                 </div>
                 <div className="leading-tight">
-                  <span className="text-[10px] sm:text-[11px] font-black tracking-wider uppercase text-white block">
+                  <span className={`${isProjectorMode ? 'text-[10px]' : 'text-[11px] sm:text-xs'} font-black tracking-wider uppercase text-white block`}>
                     {tournamentTitle}
                   </span>
-                  <span className="text-[9px] font-bold text-amber-400 uppercase tracking-widest">
+                  <span className={`${isProjectorMode ? 'text-[8px]' : 'text-[9px] sm:text-[10px]'} font-bold text-amber-400 uppercase tracking-widest`}>
                     {isSold ? 'WINNING TEAM' : 'CURRENT HIGHEST BIDDER'}
                   </span>
                 </div>
@@ -458,211 +413,146 @@ function ZPLBroadcastPlayerStageComponent({
               {/* Status indicator */}
               <div className="flex items-center gap-1.5">
                 {isSold ? (
-                  <span className="px-2.5 py-0.5 rounded-full bg-emerald-500 text-black text-[10px] font-black uppercase tracking-wider flex items-center gap-1">
-                    <Check className="w-3 h-3 stroke-[3]" />
+                  <span className={`${isProjectorMode ? 'px-2 py-0.5 text-[9px]' : 'px-2.5 py-0.5 text-[10px] sm:text-xs'} rounded-full bg-emerald-500 text-black font-black uppercase tracking-wider flex items-center gap-1 shadow-sm`}>
+                    <Check className="w-3 h-3 stroke-[3.5]" />
                     ACQUIRED
                   </span>
                 ) : isBiddingActive ? (
-                  <span className="px-2.5 py-0.5 rounded-full bg-amber-500/20 border border-amber-400/80 text-amber-300 text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5 animate-pulse">
-                    <span className="w-2 h-2 rounded-full bg-amber-400 animate-ping" />
+                  <span className={`${isProjectorMode ? 'px-2 py-0.5 text-[9px]' : 'px-2.5 py-0.5 text-[10px] sm:text-xs'} rounded-full bg-amber-500/20 border border-amber-400/80 text-amber-300 font-black uppercase tracking-wider flex items-center gap-1 animate-pulse shadow-sm`}>
+                    <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-ping" />
                     HOLDING BID
                   </span>
                 ) : (
-                  <span className="px-2.5 py-0.5 rounded-full bg-zinc-800 text-zinc-400 text-[10px] font-bold uppercase tracking-wider">
+                  <span className={`${isProjectorMode ? 'px-2 py-0.5 text-[9px]' : 'px-2.5 py-0.5 text-[10px] sm:text-xs'} rounded-full bg-zinc-800 text-zinc-400 font-bold uppercase tracking-wider`}>
                     WAITING FOR BID
                   </span>
                 )}
               </div>
             </div>
 
-            {/* Main Content: Current Holding Team Card */}
+            {/* Main Content: Photo strictly on Left, ALL Details strictly on Right (Compact & Balanced) */}
             {holdingTeam ? (
-              <div className="p-4 sm:p-5 flex flex-col justify-between space-y-4">
-                {/* Team Hero Display: Large Logo & Name */}
-                <div className="flex items-center gap-4">
-                  {/* Glowing Team Logo Emblem */}
-                  <div className="relative shrink-0">
-                    <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl p-[2.5px] bg-gradient-to-br from-amber-300 via-amber-500 to-yellow-600 shadow-xl shadow-amber-500/25 flex items-center justify-center">
-                      <div className="w-full h-full rounded-[14px] bg-black overflow-hidden flex items-center justify-center">
-                        {holdingTeamLogo ? (
-                          <img
-                            src={holdingTeamLogo}
-                            alt={holdingTeam.name}
-                            className="w-full h-full object-cover"
-                          />
-                        ) : (
-                          <div className="w-full h-full flex flex-col items-center justify-center bg-gradient-to-br from-zinc-900 to-black text-amber-400 p-2">
-                            <Shield className="w-8 h-8 text-amber-400 mb-0.5" />
-                            <span className="text-[10px] font-black uppercase">
-                              {holdingTeam.name.slice(0, 3)}
-                            </span>
-                          </div>
-                        )}
-                      </div>
+              <div className={`p-2.5 sm:p-3 md:p-3.5 ${isProjectorMode ? 'py-1.5 gap-2.5 sm:gap-3 flex-1 min-h-0' : 'gap-3 sm:gap-4'} flex flex-row items-center`}>
+                
+                {/* Team Logo on Left Side (Smaller, Compact & Framed) */}
+                <div className="shrink-0 flex items-center justify-center">
+                  <div className={`relative ${
+                    isProjectorMode
+                      ? 'w-14 h-14 sm:w-16 sm:h-16 md:w-20 md:h-20'
+                      : 'w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24'
+                  } rounded-2xl p-[2px] bg-gradient-to-br from-amber-300 via-amber-500 to-yellow-600 shadow-lg flex items-center justify-center`}>
+                    <div className="w-full h-full rounded-[14px] bg-black overflow-hidden flex items-center justify-center">
+                      {holdingTeamLogo && !teamLogoError ? (
+                        <img
+                          src={holdingTeamLogo}
+                          alt={holdingTeam.name}
+                          onError={() => setTeamLogoError(true)}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex flex-col items-center justify-center bg-gradient-to-br from-zinc-900 to-black text-amber-400 p-1 text-center">
+                          <Shield className={`${isProjectorMode ? 'w-6 h-6' : 'w-8 h-8'} text-amber-400 mb-0.5`} />
+                          <span className="text-[8px] font-black uppercase tracking-wider">
+                            {holdingTeam.name.slice(0, 4)}
+                          </span>
+                        </div>
+                      )}
                     </div>
-                    {/* Active pulse ring */}
-                    <div className="absolute -inset-1 rounded-2xl border border-amber-400/40 animate-pulse pointer-events-none" />
                   </div>
+                </div>
 
-                  {/* Team Titles & Status */}
-                  <div className="flex-1 min-w-0">
-                    <span className="text-[10px] sm:text-[11px] font-black tracking-widest uppercase text-amber-400 flex items-center gap-1">
-                      <Trophy className="w-3.5 h-3.5 text-amber-400" />
-                      {isSold ? 'Player Awarded To' : 'Current Top Bidder'}
+                {/* ALL Team Details on Right Side */}
+                <div className="flex-1 min-w-0 flex flex-col justify-center space-y-1 sm:space-y-1.5 text-left">
+                  
+                  {/* Team Title & Award Status */}
+                  <div>
+                    <span className="text-[8px] sm:text-[9px] font-black tracking-widest uppercase text-amber-400 inline-flex items-center gap-1">
+                      <Trophy className="w-2.5 h-2.5 text-amber-400" />
+                      {isSold ? 'Player Awarded To' : 'Leading Franchise'}
                     </span>
-                    <h3 className="text-xl sm:text-2xl md:text-3xl font-black text-white uppercase tracking-tight truncate drop-shadow-md">
+                    <h3 className={`${
+                      isProjectorMode
+                        ? 'text-sm sm:text-lg md:text-xl'
+                        : 'text-base sm:text-xl md:text-2xl'
+                    } font-black text-white uppercase tracking-tight break-words leading-tight`}>
                       {holdingTeam.name}
                     </h3>
-                    <p className="text-xs text-zinc-400 font-semibold mt-0.5 truncate">
+                    <p className="text-[8px] sm:text-[10px] text-zinc-400 font-bold">
                       Official ZPL Franchise
                     </p>
                   </div>
-                </div>
 
-                {/* Team Financial & Squad Metrics */}
-                <div className="grid grid-cols-3 gap-2 rounded-xl bg-zinc-950/80 border border-zinc-800 p-2.5 text-center">
-                  <div className="border-r border-zinc-800">
-                    <span className="text-[10px] font-bold uppercase text-zinc-400 block">
-                      Remaining Purse
-                    </span>
-                    <span className="text-sm sm:text-base font-black text-emerald-400">
-                      ₹ {holdingTeam.remainingPurse?.toLocaleString() ?? 0}
-                    </span>
-                  </div>
-                  <div className="border-r border-zinc-800">
-                    <span className="text-[10px] font-bold uppercase text-zinc-400 block">
-                      Squad Size
-                    </span>
-                    <span className="text-sm sm:text-base font-black text-white">
-                      {holdingTeam.purchasedPlayerCount ?? 0} / 15
-                    </span>
-                  </div>
-                  <div>
-                    <span className="text-[10px] font-bold uppercase text-zinc-400 block">
-                      Total Spent
-                    </span>
-                    <span className="text-sm sm:text-base font-black text-amber-300">
-                      ₹ {(holdingTeam.totalSpent ?? 0).toLocaleString()}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Big Golden Bid Callout Plaque */}
-                <div className="rounded-xl bg-gradient-to-r from-amber-500/20 via-yellow-500/10 to-amber-500/20 border-2 border-amber-500/50 p-3 flex items-center justify-between shadow-lg">
-                  <div className="flex items-center gap-2">
-                    <div className="p-2 rounded-lg bg-amber-500 text-black">
-                      <Zap className="w-5 h-5 fill-black" />
-                    </div>
-                    <div>
-                      <span className="text-[10px] font-black uppercase tracking-wider text-amber-400 block">
-                        {isSold ? 'Final Purchase Bid' : 'Active Holding Bid'}
+                  {/* Single-Row Strip: 3 Metrics + Final Bid Plaque (Larger Numbers) */}
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 sm:gap-2 md:gap-2.5 items-stretch">
+                    
+                    {/* Remaining Purse */}
+                    <div className="rounded-xl bg-zinc-950/95 border border-zinc-800/90 p-1.5 sm:p-2 md:p-2.5 text-center shadow-sm">
+                      <span className="text-[8px] sm:text-[10px] md:text-xs font-black uppercase tracking-wider text-zinc-400 block mb-0.5">
+                        Purse Left
                       </span>
-                      <span className="text-xs text-zinc-300 font-medium">
-                        For {playerName}
+                      <span className={`${isProjectorMode ? 'text-sm sm:text-base md:text-lg' : 'text-base sm:text-lg md:text-xl lg:text-2xl'} font-black text-emerald-400 block tracking-tight`}>
+                        ₹ {holdingTeam.remainingPurse?.toLocaleString() ?? 0}
                       </span>
                     </div>
+
+                    {/* Squad Size */}
+                    <div className="rounded-xl bg-zinc-950/95 border border-zinc-800/90 p-1.5 sm:p-2 md:p-2.5 text-center shadow-sm">
+                      <span className="text-[8px] sm:text-[10px] md:text-xs font-black uppercase tracking-wider text-zinc-400 block mb-0.5">
+                        Squad
+                      </span>
+                      <span className={`${isProjectorMode ? 'text-sm sm:text-base md:text-lg' : 'text-base sm:text-lg md:text-xl lg:text-2xl'} font-black text-white block tracking-tight`}>
+                        {holdingTeam.purchasedPlayerCount ?? 0} / 15
+                      </span>
+                    </div>
+
+                    {/* Total Spent */}
+                    <div className="rounded-xl bg-zinc-950/95 border border-zinc-800/90 p-1.5 sm:p-2 md:p-2.5 text-center shadow-sm">
+                      <span className="text-[8px] sm:text-[10px] md:text-xs font-black uppercase tracking-wider text-zinc-400 block mb-0.5">
+                        Spent
+                      </span>
+                      <span className={`${isProjectorMode ? 'text-sm sm:text-base md:text-lg' : 'text-base sm:text-lg md:text-xl lg:text-2xl'} font-black text-amber-300 block tracking-tight`}>
+                        ₹ {(holdingTeam.totalSpent ?? 0).toLocaleString()}
+                      </span>
+                    </div>
+
+                    {/* Final Purchase / Bid badge */}
+                    <div className="rounded-xl bg-gradient-to-r from-amber-500/25 via-yellow-500/20 to-amber-500/25 border border-amber-500/70 p-1.5 sm:p-2 md:p-2.5 text-center flex flex-col justify-center shadow-md">
+                      <span className="text-[8px] sm:text-[10px] md:text-xs font-black uppercase tracking-wider text-amber-400 block mb-0.5">
+                        {isSold ? 'Purchase Bid' : 'Active Bid'}
+                      </span>
+                      <span className={`${isProjectorMode ? 'text-sm sm:text-base md:text-lg' : 'text-base sm:text-lg md:text-xl lg:text-2xl'} font-black text-white block tracking-tight`}>
+                        <span className="text-amber-400 mr-0.5">₹</span>
+                        {currentBid} <span className="text-[9px] sm:text-[11px] md:text-xs text-amber-400 font-black uppercase ml-0.5">PTS</span>
+                      </span>
+                    </div>
+
                   </div>
 
-                  <div className="text-right">
-                    <div className="text-xl sm:text-2xl font-black text-white tracking-tight">
-                      <span className="text-amber-400 font-serif mr-1">₹</span>
-                      {currentBid} <span className="text-xs sm:text-sm text-amber-400 font-bold uppercase">PTS</span>
-                    </div>
-                  </div>
                 </div>
+
               </div>
             ) : (
               /* State when no team has placed a bid yet */
-              <div className="p-8 text-center flex flex-col items-center justify-center space-y-3 min-h-[260px]">
-                <div className="w-16 h-16 rounded-2xl bg-zinc-900 border border-zinc-800 flex items-center justify-center text-zinc-500 shadow-inner">
-                  <Shield className="w-8 h-8 text-amber-500/50" />
+              <div className={`p-3 text-center flex flex-col items-center justify-center space-y-1 ${isProjectorMode ? 'min-h-[70px]' : 'min-h-[100px]'}`}>
+                <div className={`${isProjectorMode ? 'w-6 h-6' : 'w-9 h-9'} rounded-xl bg-zinc-900 border border-zinc-800 flex items-center justify-center text-zinc-500 shadow-inner`}>
+                  <Shield className={`${isProjectorMode ? 'w-3.5 h-3.5' : 'w-5 h-5'} text-amber-500/50`} />
                 </div>
                 <div>
-                  <h4 className="text-base font-black text-white uppercase tracking-wider">
-                    No Active Bidder
+                  <h4 className={`${isProjectorMode ? 'text-[11px] sm:text-xs' : 'text-xs sm:text-sm'} font-black text-white uppercase tracking-wider`}>
+                    Bidding Open
                   </h4>
-                  <p className="text-xs text-zinc-400 max-w-xs mt-1">
-                    Opening bid at base price of <span className="text-amber-400 font-bold">{basePoints} PTS</span>. Teams may place bids via the auctioneer desk.
+                  <p className="text-[9px] sm:text-[10px] text-zinc-400 max-w-sm">
+                    Waiting for opening bid at base price of <span className="text-amber-400 font-bold">{basePoints} PTS</span>.
                   </p>
-                </div>
-                <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-400 text-[11px] font-bold uppercase tracking-wider">
-                  <span className="w-2 h-2 rounded-full bg-amber-400 animate-ping" />
-                  Bidding Open
                 </div>
               </div>
             )}
-
-            {/* Bottom Sub-Strip */}
-            <div className="px-3 py-1.5 bg-zinc-950 border-t border-zinc-800 flex items-center justify-between text-[9px] font-bold text-zinc-400 uppercase tracking-wider">
-              <span>{teams.length} PARTICIPATING FRANCHISES</span>
-              <span>ZPL OFFICIAL AUCTION</span>
-            </div>
 
           </div>
         </div>
 
       </div>
 
-      {/* 3. CENTER LOWER-THIRD NEWS TICKER (SMALL, SLEEK & REFINED) */}
-      <div className="relative px-3 sm:px-6 py-2 pb-3 w-full max-w-3xl mx-auto">
-        <div className="rounded-full bg-white/95 text-black px-3.5 py-1.5 border border-zinc-300 shadow-xl flex items-center justify-center text-center">
-          <p className="text-[11px] sm:text-xs font-bold text-zinc-900 leading-snug flex items-center justify-center flex-wrap gap-1.5">
-            {auctionState?.status === 'paused' ? (
-              <>
-                <span className="px-2 py-0.5 rounded-full bg-amber-500 text-black font-black text-[9px] uppercase tracking-wider shadow-xs animate-pulse">
-                  AUCTION PAUSED
-                </span>
-                <span>
-                  The auction is currently on pause by the admin. Bidding will resume shortly.
-                </span>
-              </>
-            ) : isSold ? (
-              <>
-                <span className="px-2 py-0.5 rounded-full bg-emerald-600 text-white font-black text-[9px] uppercase tracking-wider shadow-xs">
-                  OFFICIAL NOTICE
-                </span>
-                <span>
-                  <strong className="uppercase font-black text-black">{playerName}</strong> has been SOLD to{' '}
-                  <strong className="text-amber-800 uppercase font-black">{auctionState?.winningTeamName || 'a Team'}</strong>{' '}
-                  for {currentBid} PTS in the {tournamentTitle}.
-                </span>
-              </>
-            ) : isUnsold ? (
-              <>
-                <span className="px-2 py-0.5 rounded-full bg-rose-600 text-white font-black text-[9px] uppercase tracking-wider shadow-xs">
-                  OFFICIAL NOTICE
-                </span>
-                <span>
-                  <strong className="uppercase font-black text-black">{playerName}</strong> remains UNSOLD at base price of {basePoints} PTS and will be recalled in the Unsold Round.
-                </span>
-              </>
-            ) : isBiddingActive ? (
-              <>
-                <span className="px-2 py-0.5 rounded-full bg-amber-500 text-black font-black text-[9px] uppercase tracking-wider shadow-xs">
-                  LIVE BID
-                </span>
-                <span>
-                  Current highest bid for <strong className="uppercase font-black text-black">{playerName}</strong> is {currentBid} PTS by{' '}
-                  <strong className="text-black uppercase font-black">{auctionState?.winningTeamName || 'Leading Team'}</strong>.
-                </span>
-              </>
-            ) : (
-              <>
-                <span className="px-2 py-0.5 rounded-full bg-zinc-800 text-amber-400 font-black text-[9px] uppercase tracking-wider shadow-xs">
-                  ZPL STATUS
-                </span>
-                <span>
-                  A total of{' '}
-                  <strong className="text-black font-black">
-                    {totalPointsSpent.toLocaleString()} PTS
-                  </strong>{' '}
-                  has been spent so far in the {tournamentTitle}.
-                </span>
-              </>
-            )}
-          </p>
-        </div>
-      </div>
     </div>
   );
 }

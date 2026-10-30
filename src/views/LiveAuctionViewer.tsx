@@ -5,6 +5,7 @@ import { Player3DCard } from '../components/Player3DCard';
 import { TeamPurseBoard } from '../components/TeamPurseBoard';
 import { PreAuctionSlideshow } from '../components/PreAuctionSlideshow';
 import { CelebrationConfetti } from '../components/CelebrationConfetti';
+import { PlayerDecisionPopup } from '../components/PlayerDecisionPopup';
 import { SocialFollowStrip } from '../components/SocialFollowStrip';
 import { ZPLBroadcastPlayerStage } from '../components/ZPLBroadcastPlayerStage';
 import {
@@ -360,16 +361,17 @@ export function LiveAuctionViewer({
     <div
       className={`bg-black text-white selection:bg-amber-400 selection:text-black flex flex-col justify-between ${
         isProjectorMode
-          ? 'h-screen max-h-screen w-screen overflow-hidden p-2 sm:p-3 md:p-4 select-none'
+          ? 'h-screen max-h-screen w-screen overflow-hidden p-1.5 sm:p-2 select-none'
           : 'min-h-screen p-4 sm:p-6 lg:p-8'
       }`}
     >
       <CelebrationConfetti active={showCelebration} />
+      <PlayerDecisionPopup auctionState={auctionState} teams={teams} />
 
       {/* TOP BAR / HEADER */}
       <header
-        className={`w-full max-w-7xl mx-auto flex flex-col md:flex-row md:items-center md:justify-between gap-3 border-b border-zinc-800/80 shrink-0 ${
-          isProjectorMode ? 'pb-2 mb-2' : 'pb-4 mb-6'
+        className={`w-full max-w-7xl mx-auto flex flex-col md:flex-row md:items-center md:justify-between gap-2 border-b border-zinc-800/80 shrink-0 ${
+          isProjectorMode ? 'py-1 mb-1' : 'pb-4 mb-6'
         }`}
       >
         {/* Left Side: Back button + Title & Info */}
@@ -566,44 +568,6 @@ export function LiveAuctionViewer({
         </div>
       </header>
 
-      {/* ANNOUNCEMENT BANNER FOR SOLD / UNSOLD STATUS */}
-      {auctionState?.currentPlayerId && (auctionState.playerStatus === 'sold' || auctionState.playerStatus === 'unsold') && (
-        <div className="w-full max-w-7xl mx-auto mb-4">
-          {auctionState.playerStatus === 'sold' ? (
-            <div className="w-full rounded-2xl bg-emerald-950/90 border-2 border-emerald-400 p-4 sm:p-5 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-xl animate-pulse-sold">
-              <div className="flex items-center gap-3">
-                <span className="px-4 py-1 rounded-full bg-emerald-500 text-black font-black text-sm uppercase tracking-wider">
-                  SOLD
-                </span>
-                <span className="text-lg sm:text-2xl font-black text-white uppercase">
-                  {auctionState.currentPlayerName} SOLD TO {auctionState.winningTeamName || 'WINNING TEAM'} FOR {auctionState.currentBidPoints ?? auctionState.currentPlayerBasePoints} PTS
-                </span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="text-sm font-bold uppercase text-emerald-300">Highest Bid:</span>
-                <span className="text-2xl font-black text-white bg-emerald-800/80 px-4 py-1 rounded-xl border border-emerald-400">
-                  {auctionState.currentBidPoints ?? auctionState.currentPlayerBasePoints} PTS
-                </span>
-              </div>
-            </div>
-          ) : (
-            <div className="w-full rounded-2xl bg-red-950/90 border-2 border-red-500 p-4 sm:p-5 flex items-center justify-between gap-3 shadow-xl animate-pulse-unsold">
-              <div className="flex items-center gap-3">
-                <span className="px-4 py-1 rounded-full bg-red-600 text-white font-black text-sm uppercase tracking-wider">
-                  UNSOLD
-                </span>
-                <span className="text-lg sm:text-2xl font-black text-white uppercase">
-                  {auctionState.currentPlayerName} UNSOLD
-                </span>
-              </div>
-              <span className="hidden md:inline text-xs font-semibold text-rose-200">
-                Moves to Unsold Player Round
-              </span>
-            </div>
-          )}
-        </div>
-      )}
-
       {/* MAIN VIEWPORT */}
       <main
         className={`w-full max-w-7xl mx-auto flex-1 min-h-0 flex flex-col justify-center ${
@@ -719,7 +683,7 @@ export function LiveAuctionViewer({
           )
         ) : (
           /* LIVE BROADCAST ARENA STAGE (MATCHING OFFICIAL TV AUCTION BROADCAST) */
-          <div className="w-full flex-1 flex flex-col justify-center min-h-0 py-1 space-y-6">
+          <div className={`w-full flex-1 flex flex-col justify-center min-h-0 ${isProjectorMode ? 'py-0 space-y-0 h-full overflow-hidden' : 'py-1 space-y-6'}`}>
             <ZPLBroadcastPlayerStage
               auction={auction}
               auctionState={auctionState}
@@ -743,7 +707,7 @@ export function LiveAuctionViewer({
 
       {/* SOCIAL MEDIA & FOOTER TICKER */}
       <footer className={`w-full max-w-7xl mx-auto shrink-0 ${
-        isProjectorMode ? 'pt-1.5 mt-2 border-t border-zinc-800' : 'pt-6 mt-8 border-t border-zinc-800 space-y-4'
+        isProjectorMode ? 'pt-1 mt-1 border-t border-zinc-800' : 'pt-6 mt-8 border-t border-zinc-800 space-y-4'
       }`}>
         {/* VISIBLE SOCIAL MEDIA FOOTER STRIP IN EVERY AUCTION VIEWER STATE */}
         <SocialFollowStrip variant="dark" />
