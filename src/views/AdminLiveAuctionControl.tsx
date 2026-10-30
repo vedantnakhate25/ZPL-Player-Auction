@@ -32,6 +32,10 @@ import {
   Eye,
   CheckCircle2,
   ChevronLeft,
+  ChevronDown,
+  ChevronUp,
+  SlidersHorizontal,
+  Zap,
   Image as ImageIcon,
   Gavel
 } from 'lucide-react';
@@ -65,6 +69,7 @@ export function AdminLiveAuctionControl({
   const [showCelebration, setShowCelebration] = useState(false);
   const [showPreAuctionPhotoManager, setShowPreAuctionPhotoManager] = useState(false);
   const [mobileTab, setMobileTab] = useState<'desk' | 'teams' | 'queue'>('desk');
+  const [showManualAdjuster, setShowManualAdjuster] = useState(false);
 
   // 1. Subscribe to Auction
   useEffect(() => {
@@ -256,6 +261,53 @@ export function AdminLiveAuctionControl({
       });
     } catch (err) {
       console.error('Bid update failed:', err);
+    }
+  };
+
+  // Direct 1-Click Team Bidding: Hit particular team button to immediately apply +5 pts (or target points)
+  const handleDirectTeamBid = async (team: Team, targetPoints?: number) => {
+    if (!currentPlayer || !auctionState || !auctionState.currentPlayerId) return;
+
+    if (auctionState.status === 'paused') {
+      setActionError('Auction is currently PAUSED! Please click RESUME AUCTION first before placing bids.');
+      return;
+    }
+
+    const basePrice = currentPlayer.basePoints || 50;
+    const currentPrice = auctionState.currentBidPoints && auctionState.winningTeamId
+      ? auctionState.currentBidPoints
+      : basePrice;
+
+    const newBid = targetPoints !== undefined
+      ? targetPoints
+      : (auctionState.winningTeamId ? currentPrice + 5 : basePrice);
+
+    if (team.remainingPurse < newBid) {
+      setActionError(
+        `Cannot bid! ${team.name} only has ${team.remainingPurse} PTS remaining in purse (Bid requires ${newBid} PTS).`
+      );
+      return;
+    }
+
+    setBidPoints(newBid);
+    setSelectedTeamId(team.id);
+    setActionError(null);
+
+    try {
+      await updateDoc(doc(db, 'auctionState', auctionId), {
+        currentBidPoints: Number(newBid),
+        winningTeamId: team.id,
+        winningTeamName: team.name,
+        winningTeamLogo: team.logoUrl,
+        winningTeamRemainingPurse: team.remainingPurse,
+        playerStatus: 'bidding',
+        updatedAt: new Date().toISOString()
+      });
+      setActionSuccess(`Bid placed: ${team.name} holds highest bid at ₹ ${newBid} PTS`);
+      setTimeout(() => setActionSuccess(null), 3000);
+    } catch (err) {
+      console.error('Direct team bid failed:', err);
+      setActionError('Failed to record bid. Please try again.');
     }
   };
 
@@ -563,6 +615,8 @@ export function AdminLiveAuctionControl({
   }
 
   const selectedWinningTeam = teams.find((t) => t.id === selectedTeamId);
+  const activeHoldingTeam = teams.find((t) => t.id === (auctionState?.winningTeamId || selectedTeamId));
+  const currentLiveBidPoints = auctionState?.currentBidPoints || bidPoints || currentPlayer?.basePoints || 50;
 
   return (
     <div className="min-h-screen bg-black text-white p-4 sm:p-6 lg:p-8 selection:bg-amber-400 selection:text-black">
@@ -922,167 +976,248 @@ export function AdminLiveAuctionControl({
                   </div>
                 )}
 
-                {/* SELECT TEAM */}
-                <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <label className="text-xs font-bold uppercase tracking-wider text-zinc-400">
-                      Winning / Highest Bidder Team:
-                    </label>
+                {/* PROMINENT LIVE BID STATUS: TEAM NAME & BID POINT VISIBLE TOGETHER */}
+                <div className={`p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-zinc-950 via-zinc-900 to-zinc-950 border-2 ${activeHoldingTeam ? 'border-amber-400 shadow-amber-500/15 shadow-xl' : 'border-zinc-800'} transition-all`}>
+                  <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+                    {/* Left: Active Bidder Team Details */}
+                    <div className="flex items-center gap-3.5 w-full sm:w-auto">
+                      {activeHoldingTeam ? (
+                        <>
+                          <div className="relative shrink-0">
+                            <img
+                              src={activeHoldingTeam.logoUrl}
+                              alt={activeHoldingTeam.name}
+                              className="w-14 h-14 rounded-2xl object-cover border-2 border-amber-400 bg-black shadow-md"
+                            />
+                            <span className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-amber-400 text-black flex items-center justify-center text-[10px] font-black shadow">
+                              👑
+                            </span>
+                          </div>
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-1.5 mb-0.5">
+                              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                              <span className="text-[10px] sm:text-xs font-black uppercase tracking-wider text-amber-400">
+                                Current Highest Bidder
+                              </span>
+                            </div>
+                            <h3 className="text-lg sm:text-2xl font-black text-white tracking-tight truncate max-w-[220px] sm:max-w-xs">
+                              {activeHoldingTeam.name}
+                            </h3>
+                            <p className="text-xs font-bold text-zinc-400 mt-0.5">
+                              Purse Left: <strong className="text-emerald-400 font-black">{activeHoldingTeam.remainingPurse} PTS</strong>
+                              <span className="mx-1.5">•</span>
+                              <span>Squad: <strong>{activeHoldingTeam.purchasedPlayerCount || 0}</strong></span>
+                            </p>
+                          </div>
+                        </>
+                      ) : (
+                        <div className="flex items-center gap-3">
+                          <div className="w-12 h-12 rounded-2xl bg-zinc-900 border border-zinc-700 flex items-center justify-center text-amber-400/70 font-black shrink-0">
+                            <Coins className="w-6 h-6" />
+                          </div>
+                          <div>
+                            <span className="text-[10px] sm:text-xs font-black uppercase tracking-wider text-zinc-400">
+                              Current Bidding Status
+                            </span>
+                            <h3 className="text-base sm:text-lg font-black text-zinc-200">
+                              No Bids Placed Yet
+                            </h3>
+                            <p className="text-xs text-zinc-400">
+                              Base: <strong className="text-amber-400">{currentPlayer?.basePoints || 50} PTS</strong>. Hit any team's <strong className="text-amber-400">+5 PTS</strong> button below!
+                            </p>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Right: Big Bold Bid Point Display */}
+                    <div className="w-full sm:w-auto text-center sm:text-right bg-black/60 sm:bg-transparent p-3 sm:p-0 rounded-2xl border border-zinc-800/80 sm:border-0">
+                      <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-zinc-400 block mb-0.5">
+                        {activeHoldingTeam ? 'Holding Bid Points' : 'Base Starting Price'}
+                      </span>
+                      <div className="text-3xl sm:text-4xl lg:text-5xl font-black text-amber-400 tracking-tight drop-shadow-md">
+                        ₹ {currentLiveBidPoints}{' '}
+                        <span className="text-xs sm:text-sm font-bold text-zinc-300 uppercase">
+                          PTS
+                        </span>
+                      </div>
+                      <span className="text-[11px] font-bold text-emerald-400 block mt-0.5">
+                        {activeHoldingTeam
+                          ? `Next +5 Hit: ₹ ${currentLiveBidPoints + 5} PTS`
+                          : `First +5 Hit: ₹ ${(currentPlayer?.basePoints || 50) + 5} PTS`}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* DIRECT TEAM BID BUTTONS: HIT TO BID +5 PTS WITH TEAM NAME & BID VISIBLE TOGETHER */}
+                <div className={auctionState.status === 'paused' ? 'opacity-60' : ''}>
+                  <div className="flex items-center justify-between mb-3">
+                    <div>
+                      <label className="text-xs font-black uppercase tracking-wider text-amber-400 flex items-center gap-1.5">
+                        <Zap className="w-4 h-4 text-amber-400 fill-current" />
+                        <span>Direct Team Bidding (+5 PTS Quick Hit):</span>
+                      </label>
+                      <span className="text-[11px] text-zinc-400 block mt-0.5">
+                        Hit any team's button to immediately register their bid, advance points by +5, and sync live.
+                      </span>
+                    </div>
                     {auctionState.status === 'paused' && (
-                      <span className="text-[11px] font-bold text-amber-400">
-                        Resume auction to select team
+                      <span className="text-[11px] font-bold text-amber-400 shrink-0">
+                        Paused
                       </span>
                     )}
                   </div>
-                  <div className={`grid grid-cols-1 sm:grid-cols-2 gap-2.5 ${auctionState.status === 'paused' ? 'opacity-60' : ''}`}>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     {teams.map((t) => {
-                      const isSelected = t.id === selectedTeamId;
-                      const hasEnoughPurse = t.remainingPurse >= bidPoints;
+                      const isLeading = t.id === auctionState.winningTeamId;
+                      const basePrice = currentPlayer?.basePoints || 50;
+                      const hasBidder = Boolean(auctionState.winningTeamId);
+                      
+                      // Next bid points for this team
+                      const nextBidForTeam = hasBidder
+                        ? currentLiveBidPoints + 5
+                        : basePrice + 5;
+                      
+                      const hasEnoughPurseForNext = t.remainingPurse >= nextBidForTeam;
+                      const hasEnoughPurseForBase = t.remainingPurse >= basePrice;
                       const isPaused = auctionState.status === 'paused';
 
                       return (
-                        <button
+                        <div
                           key={t.id}
-                          type="button"
-                          onClick={() => {
-                            if (isPaused) {
-                              setActionError('Auction is currently PAUSED! Please click RESUME AUCTION first before placing bids.');
-                              return;
-                            }
-                            handleUpdateBid(bidPoints, t.id);
-                          }}
-                          disabled={isPaused || !hasEnoughPurse}
-                          className={`flex items-center gap-3 p-3 rounded-2xl border text-left transition-all ${
+                          className={`relative p-3.5 rounded-2xl border transition-all flex flex-col justify-between gap-3 ${
                             isPaused
-                              ? 'cursor-not-allowed bg-zinc-950/60 border-zinc-800 text-zinc-400'
-                              : isSelected
-                              ? 'bg-amber-400 text-black border-amber-400 ring-2 ring-amber-400/50 shadow-md font-bold cursor-pointer'
-                              : hasEnoughPurse
-                              ? 'bg-zinc-950 border-zinc-800 hover:border-amber-400/40 text-white cursor-pointer'
-                              : 'bg-zinc-950/40 border-zinc-800/40 opacity-40 cursor-not-allowed text-zinc-500'
+                              ? 'bg-zinc-950/60 border-zinc-800/80 opacity-60'
+                              : isLeading
+                              ? 'bg-gradient-to-r from-amber-950/40 via-zinc-950 to-amber-950/40 border-2 border-amber-400 ring-2 ring-amber-400/40 shadow-lg shadow-amber-500/10'
+                              : hasEnoughPurseForNext
+                              ? 'bg-zinc-950 border-zinc-800 hover:border-amber-400/50 hover:bg-zinc-900/60'
+                              : 'bg-zinc-950/40 border-zinc-800/40 opacity-40'
                           }`}
                         >
-                          <img
-                            src={t.logoUrl}
-                            alt={t.name}
-                            className="w-8 h-8 rounded-full object-cover border border-amber-500/30 bg-black shrink-0"
-                          />
-                          <div className="flex-1 min-w-0">
-                            <p className={`text-xs sm:text-sm font-black truncate ${!isPaused && isSelected ? 'text-black' : 'text-white'}`}>
-                              {t.name}
-                            </p>
-                            <p
-                              className={`text-xs font-bold ${
-                                isPaused
-                                  ? 'text-zinc-500'
-                                  : isSelected
-                                  ? 'text-black/80'
-                                  : hasEnoughPurse
-                                  ? 'text-emerald-400'
-                                  : 'text-rose-400'
-                              }`}
-                            >
-                              Purse: {t.remainingPurse} PTS
-                            </p>
+                          {/* Team Info Header */}
+                          <div className="flex items-center justify-between gap-2.5">
+                            <div className="flex items-center gap-2.5 min-w-0">
+                              <img
+                                src={t.logoUrl}
+                                alt={t.name}
+                                className={`w-9 h-9 rounded-full object-cover border bg-black shrink-0 ${
+                                  isLeading ? 'border-amber-400 ring-2 ring-amber-400/50' : 'border-zinc-700'
+                                }`}
+                              />
+                              <div className="min-w-0">
+                                <div className="flex items-center gap-1.5">
+                                  <h5 className="text-xs sm:text-sm font-black text-white truncate">
+                                    {t.name}
+                                  </h5>
+                                  {isLeading && (
+                                    <span className="px-1.5 py-0.5 rounded-md bg-amber-400 text-black text-[9px] font-black uppercase tracking-wider shrink-0">
+                                      Leader
+                                    </span>
+                                  )}
+                                </div>
+                                <p className={`text-[11px] font-bold ${
+                                  t.remainingPurse < nextBidForTeam ? 'text-rose-400' : 'text-emerald-400'
+                                }`}>
+                                  Purse: {t.remainingPurse} PTS
+                                </p>
+                              </div>
+                            </div>
+
+                            {/* Leading badge or quick bid point display */}
+                            {isLeading && (
+                              <div className="text-right shrink-0">
+                                <span className="text-[9px] uppercase font-bold text-amber-400 block">
+                                  Holds Bid
+                                </span>
+                                <span className="text-sm font-black text-amber-300">
+                                  ₹ {currentLiveBidPoints} PTS
+                                </span>
+                              </div>
+                            )}
                           </div>
-                        </button>
+
+                          {/* Action Buttons: Direct Hit +5 PTS Button (and Base Price if no bid placed yet) */}
+                          <div className="grid grid-cols-1 gap-2 pt-1">
+                            {!hasBidder ? (
+                              <div className="grid grid-cols-2 gap-2">
+                                <button
+                                  type="button"
+                                  disabled={isPaused || !hasEnoughPurseForBase}
+                                  onClick={() => handleDirectTeamBid(t, basePrice)}
+                                  className="min-h-[44px] px-3 py-2 rounded-xl bg-zinc-900 hover:bg-zinc-800 active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed border border-amber-500/40 text-amber-300 font-black text-xs flex items-center justify-center gap-1 transition-all shadow-sm cursor-pointer"
+                                  title={`Open at Base Price (${basePrice} PTS)`}
+                                >
+                                  <span>Base: ₹ {basePrice}</span>
+                                </button>
+
+                                <button
+                                  type="button"
+                                  disabled={isPaused || !hasEnoughPurseForNext}
+                                  onClick={() => handleDirectTeamBid(t, nextBidForTeam)}
+                                  className="min-h-[44px] px-3 py-2 rounded-xl bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed text-black font-black text-xs flex items-center justify-center gap-1.5 transition-all shadow-md shadow-amber-500/20 cursor-pointer"
+                                  title={`Hit to place +5 bid (${nextBidForTeam} PTS)`}
+                                >
+                                  <Zap className="w-3.5 h-3.5 fill-current shrink-0" />
+                                  <span>+5 PTS (₹ {nextBidForTeam})</span>
+                                </button>
+                              </div>
+                            ) : (
+                              <button
+                                type="button"
+                                disabled={isPaused || !hasEnoughPurseForNext}
+                                onClick={() => handleDirectTeamBid(t, nextBidForTeam)}
+                                className={`w-full min-h-[46px] px-4 py-2.5 rounded-xl font-black text-xs sm:text-sm flex items-center justify-between transition-all shadow-md active:scale-98 cursor-pointer ${
+                                  isPaused
+                                    ? 'bg-zinc-900 border border-zinc-800 text-zinc-500 cursor-not-allowed'
+                                    : !hasEnoughPurseForNext
+                                    ? 'bg-rose-950/40 border border-rose-800 text-rose-300 cursor-not-allowed opacity-60'
+                                    : isLeading
+                                    ? 'bg-gradient-to-r from-amber-400 via-amber-300 to-amber-400 text-black hover:from-amber-300 hover:to-amber-200 border-2 border-amber-300 shadow-amber-500/25'
+                                    : 'bg-gradient-to-r from-amber-400 to-amber-500 text-black hover:from-amber-300 hover:to-amber-400 border border-amber-400 shadow-amber-500/20'
+                                }`}
+                              >
+                                <span className="flex items-center gap-1.5 truncate">
+                                  <Zap className="w-4 h-4 fill-current shrink-0" />
+                                  <span className="truncate">{t.name}</span>
+                                </span>
+                                <span className="font-black px-2 py-0.5 rounded-lg bg-black text-amber-300 border border-amber-400/50 text-xs shrink-0 ml-2">
+                                  +5 PTS ➔ ₹ {nextBidForTeam}
+                                </span>
+                              </button>
+                            )}
+                          </div>
+                        </div>
                       );
                     })}
                   </div>
                 </div>
 
-                {/* BID POINTS ADJUSTER */}
-                <div className={auctionState.status === 'paused' ? 'opacity-60' : ''}>
-                  <div className="flex items-center justify-between mb-2">
-                    <label className="text-xs font-bold uppercase tracking-wider text-zinc-400">
-                      Bid / Sold Points:
-                    </label>
-                    <span className="text-xs text-zinc-400">
-                      Base:{' '}
-                      <strong className="text-amber-400">
-                        {currentPlayer?.basePoints || 50} PTS
-                      </strong>
+                {/* OPTIONAL / COLLAPSIBLE MANUAL ADJUSTER FOR CUSTOM OVERRIDES */}
+                <div className="pt-2 border-t border-zinc-800/80">
+                  <button
+                    type="button"
+                    onClick={() => setShowManualAdjuster(!showManualAdjuster)}
+                    className="w-full py-2 px-3 rounded-xl bg-zinc-950 hover:bg-zinc-900 border border-zinc-800 text-zinc-400 hover:text-zinc-200 text-xs font-bold flex items-center justify-between transition-colors cursor-pointer"
+                  >
+                    <span className="flex items-center gap-2">
+                      <SlidersHorizontal className="w-3.5 h-3.5 text-amber-400" />
+                      <span>Custom / Manual Bid Adjuster (Type Custom PTS, Steppers &amp; Quick Chips)</span>
                     </span>
-                  </div>
+                    {showManualAdjuster ? (
+                      <ChevronUp className="w-4 h-4 text-zinc-400" />
+                    ) : (
+                      <ChevronDown className="w-4 h-4 text-zinc-400" />
+                    )}
+                  </button>
 
-                  {/* Large Input with Steppers */}
-                  <div className="flex items-center gap-2 sm:gap-3">
-                    <button
-                      type="button"
-                      disabled={auctionState.status === 'paused'}
-                      onClick={() => {
-                        if (auctionState.status === 'paused') {
-                          setActionError('Auction is currently PAUSED! Please click RESUME AUCTION first.');
-                          return;
-                        }
-                        handleUpdateBid(
-                          Math.max(
-                            currentPlayer?.basePoints || 5,
-                            bidPoints - 5
-                          ),
-                          selectedTeamId
-                        );
-                      }}
-                      className="min-h-[48px] min-w-[48px] sm:min-h-[52px] sm:min-w-[52px] rounded-2xl bg-zinc-900 hover:bg-zinc-800 active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed border border-zinc-700 font-black text-amber-400 text-lg flex items-center justify-center transition-all cursor-pointer shadow-md"
-                      title="Step down 5"
-                    >
-                      -5
-                    </button>
-
-                    <div className="relative flex-1">
-                      <input
-                        type="number"
-                        disabled={auctionState.status === 'paused'}
-                        value={bidPoints}
-                        onChange={(e) => {
-                          if (auctionState.status === 'paused') {
-                            setActionError('Auction is currently PAUSED! Please click RESUME AUCTION first.');
-                            return;
-                          }
-                          handleUpdateBid(Number(e.target.value), selectedTeamId);
-                        }}
-                        min={currentPlayer?.basePoints || 0}
-                        className="w-full min-h-[48px] sm:min-h-[52px] px-4 rounded-2xl bg-zinc-950 border-2 border-amber-400 disabled:border-zinc-700 disabled:text-zinc-500 disabled:cursor-not-allowed text-amber-400 font-black text-2xl sm:text-3xl text-center focus:outline-none focus:ring-2 focus:ring-amber-400/30 shadow-inner"
-                      />
-                      <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs font-black text-zinc-500 pointer-events-none hidden sm:inline">
-                        PTS
-                      </span>
-                    </div>
-
-                    <button
-                      type="button"
-                      disabled={auctionState.status === 'paused'}
-                      onClick={() => {
-                        if (auctionState.status === 'paused') {
-                          setActionError('Auction is currently PAUSED! Please click RESUME AUCTION first.');
-                          return;
-                        }
-                        handleUpdateBid(bidPoints + 5, selectedTeamId);
-                      }}
-                      className="min-h-[48px] min-w-[48px] sm:min-h-[52px] sm:min-w-[52px] rounded-2xl bg-zinc-900 hover:bg-zinc-800 active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed border border-zinc-700 font-black text-amber-400 text-lg flex items-center justify-center transition-all cursor-pointer shadow-md"
-                      title="Step up 5"
-                    >
-                      +5
-                    </button>
-                  </div>
-
-                  {/* Fast Tap Increment Chips Bar */}
-                  <div className="mt-3">
-                    <span className="text-[11px] font-bold text-zinc-400 block mb-1.5 uppercase tracking-wide">
-                      Quick Tap Increments:
-                    </span>
-                    <div className="grid grid-cols-4 sm:grid-cols-7 gap-1.5 sm:gap-2">
-                      {[
-                        { label: '-10', val: -10 },
-                        { label: '-5', val: -5 },
-                        { label: '+5', val: 5 },
-                        { label: '+10', val: 10 },
-                        { label: '+25', val: 25 },
-                        { label: '+50', val: 50 },
-                        { label: '+100', val: 100 }
-                      ].map((item) => (
+                  {showManualAdjuster && (
+                    <div className="mt-3 p-4 rounded-2xl bg-zinc-950 border border-zinc-800 space-y-4">
+                      {/* Large Input with Steppers */}
+                      <div className="flex items-center gap-2 sm:gap-3">
                         <button
-                          key={item.label}
                           type="button"
                           disabled={auctionState.status === 'paused'}
                           onClick={() => {
@@ -1092,54 +1227,120 @@ export function AdminLiveAuctionControl({
                             }
                             handleUpdateBid(
                               Math.max(
-                                currentPlayer?.basePoints || 0,
-                                bidPoints + item.val
+                                currentPlayer?.basePoints || 5,
+                                bidPoints - 5
                               ),
                               selectedTeamId
                             );
                           }}
-                          className="min-h-[44px] rounded-xl bg-zinc-900 hover:bg-gradient-to-r hover:from-amber-400 hover:to-amber-500 hover:text-black active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed border border-zinc-700 font-black text-xs sm:text-sm text-zinc-200 transition-all shadow-sm flex items-center justify-center cursor-pointer"
+                          className="min-h-[48px] min-w-[48px] sm:min-h-[52px] sm:min-w-[52px] rounded-2xl bg-zinc-900 hover:bg-zinc-800 active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed border border-zinc-700 font-black text-amber-400 text-lg flex items-center justify-center transition-all cursor-pointer shadow-md"
+                          title="Step down 5"
                         >
-                          {item.label}
+                          -5
                         </button>
-                      ))}
-                    </div>
-                  </div>
-                </div>
 
-                {/* EXPLICIT PLACE / RESUME BID BUTTON */}
-                <div className="pt-2 border-t border-zinc-800">
-                  {auctionState.status === 'paused' ? (
-                    <button
-                      type="button"
-                      onClick={handleTogglePause}
-                      className="w-full min-h-[50px] py-3.5 px-4 rounded-2xl bg-gradient-to-r from-emerald-500 to-emerald-400 hover:from-emerald-400 hover:to-emerald-300 active:scale-[0.98] text-black font-black text-sm uppercase tracking-wider flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/20 transition-all cursor-pointer"
-                    >
-                      <Play className="w-5 h-5 fill-current" />
-                      <span>Auction Paused — Click Here to Resume &amp; Place Bid</span>
-                    </button>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        if (!selectedTeamId) {
-                          setActionError('Please select a team from the list above to place the bid.');
-                          return;
-                        }
-                        handleUpdateBid(bidPoints, selectedTeamId);
-                        setActionSuccess(`Bid placed: ${bidPoints} PTS for ${selectedWinningTeam?.name || 'Selected Team'}`);
-                        setTimeout(() => setActionSuccess(null), 3000);
-                      }}
-                      disabled={!selectedTeamId}
-                      className="w-full min-h-[50px] py-3.5 px-4 rounded-2xl bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 disabled:opacity-40 disabled:cursor-not-allowed text-black font-black text-sm uppercase tracking-wider flex items-center justify-center gap-2 shadow-lg shadow-amber-500/20 transition-all cursor-pointer active:scale-98"
-                    >
-                      <Coins className="w-5 h-5" />
-                      <span>
-                        {selectedWinningTeam
-                          ? `Place Bid: ${bidPoints} PTS for ${selectedWinningTeam.name}`
-                          : 'Select Team Above to Place Bid'}
-                      </span>
-                    </button>
+                        <div className="relative flex-1">
+                          <input
+                            type="number"
+                            disabled={auctionState.status === 'paused'}
+                            value={bidPoints}
+                            onChange={(e) => {
+                              if (auctionState.status === 'paused') {
+                                setActionError('Auction is currently PAUSED! Please click RESUME AUCTION first.');
+                                return;
+                              }
+                              handleUpdateBid(Number(e.target.value), selectedTeamId);
+                            }}
+                            min={currentPlayer?.basePoints || 0}
+                            className="w-full min-h-[48px] sm:min-h-[52px] px-4 rounded-2xl bg-black border-2 border-amber-400 disabled:border-zinc-700 disabled:text-zinc-500 disabled:cursor-not-allowed text-amber-400 font-black text-2xl sm:text-3xl text-center focus:outline-none focus:ring-2 focus:ring-amber-400/30 shadow-inner"
+                          />
+                          <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs font-black text-zinc-500 pointer-events-none hidden sm:inline">
+                            PTS
+                          </span>
+                        </div>
+
+                        <button
+                          type="button"
+                          disabled={auctionState.status === 'paused'}
+                          onClick={() => {
+                            if (auctionState.status === 'paused') {
+                              setActionError('Auction is currently PAUSED! Please click RESUME AUCTION first.');
+                              return;
+                            }
+                            handleUpdateBid(bidPoints + 5, selectedTeamId);
+                          }}
+                          className="min-h-[48px] min-w-[48px] sm:min-h-[52px] sm:min-w-[52px] rounded-2xl bg-zinc-900 hover:bg-zinc-800 active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed border border-zinc-700 font-black text-amber-400 text-lg flex items-center justify-center transition-all cursor-pointer shadow-md"
+                          title="Step up 5"
+                        >
+                          +5
+                        </button>
+                      </div>
+
+                      {/* Fast Tap Increment Chips Bar */}
+                      <div>
+                        <span className="text-[11px] font-bold text-zinc-400 block mb-1.5 uppercase tracking-wide">
+                          Quick Tap Adjustments:
+                        </span>
+                        <div className="grid grid-cols-4 sm:grid-cols-7 gap-1.5 sm:gap-2">
+                          {[
+                            { label: '-10', val: -10 },
+                            { label: '-5', val: -5 },
+                            { label: '+5', val: 5 },
+                            { label: '+10', val: 10 },
+                            { label: '+25', val: 25 },
+                            { label: '+50', val: 50 },
+                            { label: '+100', val: 100 }
+                          ].map((item) => (
+                            <button
+                              key={item.label}
+                              type="button"
+                              disabled={auctionState.status === 'paused'}
+                              onClick={() => {
+                                if (auctionState.status === 'paused') {
+                                  setActionError('Auction is currently PAUSED! Please click RESUME AUCTION first.');
+                                  return;
+                                }
+                                handleUpdateBid(
+                                  Math.max(
+                                    currentPlayer?.basePoints || 0,
+                                    bidPoints + item.val
+                                  ),
+                                  selectedTeamId
+                                );
+                              }}
+                              className="min-h-[44px] rounded-xl bg-zinc-900 hover:bg-gradient-to-r hover:from-amber-400 hover:to-amber-500 hover:text-black active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed border border-zinc-700 font-black text-xs sm:text-sm text-zinc-200 transition-all shadow-sm flex items-center justify-center cursor-pointer"
+                            >
+                              {item.label}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Manual Submit Button */}
+                      <div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (!selectedTeamId) {
+                              setActionError('Please select a team before manually applying this bid.');
+                              return;
+                            }
+                            handleUpdateBid(bidPoints, selectedTeamId);
+                            setActionSuccess(`Bid placed: ${bidPoints} PTS for ${selectedWinningTeam?.name || 'Selected Team'}`);
+                            setTimeout(() => setActionSuccess(null), 3000);
+                          }}
+                          disabled={!selectedTeamId}
+                          className="w-full min-h-[46px] py-2.5 px-4 rounded-xl bg-zinc-800 hover:bg-zinc-700 disabled:opacity-40 disabled:cursor-not-allowed text-amber-300 font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 border border-zinc-600 transition-all cursor-pointer active:scale-98"
+                        >
+                          <Coins className="w-4 h-4 text-amber-400" />
+                          <span>
+                            {selectedWinningTeam
+                              ? `Apply Manual Bid: ₹ ${bidPoints} PTS for ${selectedWinningTeam.name}`
+                              : 'Select Team to Apply Manual Bid'}
+                          </span>
+                        </button>
+                      </div>
+                    </div>
                   )}
                 </div>
               </div>
