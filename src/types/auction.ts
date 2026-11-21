@@ -87,5 +87,8 @@ export interface AuctionState {
   lastUnsoldPlayerPhoto?: string;
   lastUnsoldPlayerRole?: PlayerRole;
   lastUnsoldBasePoints?: number;
+  unsoldRoundStartedAt?: string | null;
+  unsoldRoundBannerUntil?: string | null;
+  unsoldRoundPlayerCount?: number;
   updatedAt: string;
 }

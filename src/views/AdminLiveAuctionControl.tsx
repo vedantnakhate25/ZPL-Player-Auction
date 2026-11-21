@@ -12,6 +12,7 @@ import {
 import type { Auction, AuctionState, Team, Player } from '../types/auction';
 import { CelebrationConfetti } from '../components/CelebrationConfetti';
 import { PlayerDecisionPopup } from '../components/PlayerDecisionPopup';
+import { UnsoldRoundBanner } from '../components/UnsoldRoundBanner';
 import { AdminPreAuctionPhotoManager } from '../components/AdminPreAuctionPhotoManager';
 import { useLiveViewers, formatViewerCount } from '../lib/useLiveViewers';
 import { exportAuctionResultsToExcel } from '../lib/exportAuctionExcel';
@@ -43,6 +44,35 @@ interface AdminLiveAuctionControlProps {
   auctionId: string;
   onBack: () => void;
   onViewResults: () => void;
+}
+
+const AUTO_NEXT_AFTER_DECISION_MS = 7000;
+const UNSOLD_ROUND_BANNER_MS = 20000;
+
+function shufflePlayersWithinSlots(list: Player[]): Player[] {
+  const bySlot = new Map<number, Player[]>();
+  for (const p of list) {
+    const slot = p.slotNumber || 1;
+    const bucket = bySlot.get(slot);
+    if (bucket) bucket.push(p);
+    else bySlot.set(slot, [p]);
+  }
+  const sortedSlotNumbers = Array.from(bySlot.keys()).sort((a, b) => a - b);
+  const result: Player[] = [];
+  for (const slot of sortedSlotNumbers) {
+    const bucket = [...(bySlot.get(slot) || [])];
+    for (let i = bucket.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [bucket[i], bucket[j]] = [bucket[j], bucket[i]];
+    }
+    bucket.forEach((p, idx) => {
+      result.push({
+        ...p,
+        order: slot * 10000 + (idx + 1)
+      });
+    });
+  }
+  return result;
 }
 
 export function AdminLiveAuctionControl({
@@ -82,10 +112,21 @@ export function AdminLiveAuctionControl({
     successTimerRef.current = window.setTimeout(() => setActionSuccess(null), 3000);
   };
 
+  const autoNextTimerRef = useRef<number | null>(null);
+  const handleNextPlayerRef = useRef<(() => Promise<void>) | null>(null);
+
+  const clearAutoNextTimer = () => {
+    if (autoNextTimerRef.current) {
+      window.clearTimeout(autoNextTimerRef.current);
+      autoNextTimerRef.current = null;
+    }
+  };
+
   useEffect(() => {
     return () => {
       if (successTimerRef.current) window.clearTimeout(successTimerRef.current);
       if (celebrationTimerRef.current) window.clearTimeout(celebrationTimerRef.current);
+      clearAutoNextTimer();
     };
   }, []);
 
@@ -168,7 +209,7 @@ export function AdminLiveAuctionControl({
       (snap) => {
         const list: Player[] = [];
         snap.forEach((d) => list.push({ id: d.id, ...d.data() } as Player));
-        list.sort((a, b) => a.order - b.order);
+        list.sort((a, b) => (a.slotNumber || 1) - (b.slotNumber || 1) || (a.order ?? 0) - (b.order ?? 0));
         setPlayers(list);
         setLoading(false);
       },
@@ -194,16 +235,21 @@ export function AdminLiveAuctionControl({
     return { currentPlayer: current, upcomingPlayers: upcoming, unsoldPlayers: unsold };
   }, [players, auctionState?.currentPlayerId]);
 
-  // Start Auction (single atomic batch commit)
+  // Start Auction (auto-jumbles players inside each slot + single atomic batch commit)
   const handleStartAuction = async () => {
     if (!auction) return;
+    clearAutoNextTimer();
     setSubmitting(true);
     setActionError(null);
 
     try {
       const now = new Date().toISOString();
-      const firstPlayer =
-        players.find((p) => p.status === 'upcoming' || p.status === 'current') || players[0];
+      const eligibleUpcoming = players.filter((p) => p.status === 'upcoming');
+      const existingCurrent = players.find((p) => p.status === 'current');
+
+      // Automatically jumble all upcoming players within each slot before starting
+      const jumbledUpcoming = shufflePlayersWithinSlots(eligibleUpcoming);
+      const firstPlayer = existingCurrent || jumbledUpcoming[0] || players[0];
 
       if (!firstPlayer) {
         setActionError('Please add players to this auction before starting.');
@@ -212,10 +258,30 @@ export function AdminLiveAuctionControl({
       }
 
       const batch = writeBatch(db);
-      batch.update(doc(db, 'players', firstPlayer.id), {
-        status: 'current',
-        updatedAt: now
-      });
+
+      // Persist the jumbled slot orders for all upcoming players
+      for (const p of jumbledUpcoming) {
+        if (p.id === firstPlayer.id) {
+          batch.update(doc(db, 'players', p.id), {
+            status: 'current',
+            order: p.order,
+            updatedAt: now
+          });
+        } else {
+          batch.update(doc(db, 'players', p.id), {
+            order: p.order,
+            updatedAt: now
+          });
+        }
+      }
+
+      // If firstPlayer wasn't in jumbledUpcoming (e.g. already current or fallback)
+      if (!jumbledUpcoming.some((p) => p.id === firstPlayer.id)) {
+        batch.update(doc(db, 'players', firstPlayer.id), {
+          status: 'current',
+          updatedAt: now
+        });
+      }
 
       batch.set(doc(db, 'auctionState', auctionId), {
         id: auctionId,
@@ -236,6 +302,8 @@ export function AdminLiveAuctionControl({
         winningTeamName: null,
         winningTeamLogo: null,
         winningTeamRemainingPurse: null,
+        unsoldRoundStartedAt: null,
+        unsoldRoundBannerUntil: null,
         updatedAt: now
       });
 
@@ -250,7 +318,7 @@ export function AdminLiveAuctionControl({
       setBidPoints(firstPlayer.basePoints);
       setSelectedTeamId('');
       latestBidRef.current = { points: firstPlayer.basePoints, teamId: null };
-      flashSuccess('Auction is now LIVE.');
+      flashSuccess('Auction is now LIVE. Players jumbled inside each slot.');
     } catch (err) {
       setActionError(err instanceof Error ? err.message : 'Failed to start auction');
     } finally {
@@ -449,7 +517,14 @@ export function AdminLiveAuctionControl({
       setShowCelebration(true);
       if (celebrationTimerRef.current) window.clearTimeout(celebrationTimerRef.current);
       celebrationTimerRef.current = window.setTimeout(() => setShowCelebration(false), 3800);
-      flashSuccess(`${currentPlayer.name} SOLD to ${winningTeam.name} for ₹ ${finalPoints} PTS.`);
+      flashSuccess(`${currentPlayer.name} SOLD to ${winningTeam.name} for ₹ ${finalPoints} PTS. Next player arriving automatically...`);
+
+      // Automatically bring the next player on stage right after the 7s Sold popup completes
+      clearAutoNextTimer();
+      autoNextTimerRef.current = window.setTimeout(() => {
+        autoNextTimerRef.current = null;
+        handleNextPlayerRef.current?.();
+      }, AUTO_NEXT_AFTER_DECISION_MS);
     } catch (err) {
       setActionError(err instanceof Error ? err.message : 'Failed to mark player sold');
     } finally {
@@ -494,7 +569,14 @@ export function AdminLiveAuctionControl({
       });
 
       await batch.commit();
-      flashSuccess(`${currentPlayer.name} marked UNSOLD and moved to Unsold Pool.`);
+      flashSuccess(`${currentPlayer.name} marked UNSOLD. Next player arriving automatically...`);
+
+      // Automatically bring the next player on stage right after the 7s Unsold popup completes
+      clearAutoNextTimer();
+      autoNextTimerRef.current = window.setTimeout(() => {
+        autoNextTimerRef.current = null;
+        handleNextPlayerRef.current?.();
+      }, AUTO_NEXT_AFTER_DECISION_MS);
     } catch (err) {
       setActionError(err instanceof Error ? err.message : 'Failed to mark player unsold');
     } finally {
@@ -504,8 +586,12 @@ export function AdminLiveAuctionControl({
 
   // Advance to Next Player (single atomic batch commit)
   const handleNextPlayer = async () => {
-    if (auctionState?.status === 'paused') {
-      setActionError('Auction is paused. Resume before advancing to next player.');
+    clearAutoNextTimer();
+
+    if (auctionState?.status === 'paused' || auctionState?.status === 'completed') {
+      if (auctionState?.status === 'paused') {
+        setActionError('Auction is paused. Resume before advancing to next player.');
+      }
       return;
     }
 
@@ -550,12 +636,27 @@ export function AdminLiveAuctionControl({
         } else {
           const freshUnsold = players.filter((p) => p.status === 'unsold');
           if (freshUnsold.length > 0) {
-            const firstUnsold = freshUnsold[0];
-            batch.update(doc(db, 'players', firstUnsold.id), {
-              status: 'current',
-              round: 'unsold',
-              updatedAt: now
-            });
+            // Jumble unsold players within each slot before starting Unsold Round
+            const jumbledUnsold = shufflePlayersWithinSlots(freshUnsold);
+            const firstUnsold = jumbledUnsold[0];
+            const bannerUntil = new Date(Date.now() + UNSOLD_ROUND_BANNER_MS).toISOString();
+
+            for (const up of jumbledUnsold) {
+              if (up.id === firstUnsold.id) {
+                batch.update(doc(db, 'players', up.id), {
+                  status: 'current',
+                  round: 'unsold',
+                  order: up.order,
+                  updatedAt: now
+                });
+              } else {
+                batch.update(doc(db, 'players', up.id), {
+                  round: 'unsold',
+                  order: up.order,
+                  updatedAt: now
+                });
+              }
+            }
 
             batch.update(doc(db, 'auctionState', auctionId), {
               round: 'unsold',
@@ -572,6 +673,9 @@ export function AdminLiveAuctionControl({
               winningTeamName: null,
               winningTeamLogo: null,
               winningTeamRemainingPurse: null,
+              unsoldRoundStartedAt: now,
+              unsoldRoundBannerUntil: bannerUntil,
+              unsoldRoundPlayerCount: jumbledUnsold.length,
               updatedAt: now
             });
 
@@ -584,14 +688,18 @@ export function AdminLiveAuctionControl({
             setBidPoints(firstUnsold.basePoints);
             setSelectedTeamId('');
             latestBidRef.current = { points: firstUnsold.basePoints, teamId: null };
-            flashSuccess('Regular round complete. Starting Unsold Player Round.');
+            flashSuccess('Unsold Player Round Starts! Announcement live for 20 seconds.');
           } else {
             await handleFinishAuction();
           }
         }
       } else {
+        const currentIdx = players.findIndex((p) => p.id === auctionState?.currentPlayerId);
         const remainingUnsold = players.filter(
-          (p) => p.status === 'unsold' && p.id !== auctionState?.currentPlayerId
+          (p, idx) =>
+            p.status === 'unsold' &&
+            p.id !== auctionState?.currentPlayerId &&
+            (currentIdx === -1 || idx > currentIdx)
         );
 
         if (remainingUnsold.length > 0) {
@@ -635,9 +743,13 @@ export function AdminLiveAuctionControl({
     }
   };
 
+  // Always keep ref pointing to freshest handleNextPlayer closure for auto-advance timer
+  handleNextPlayerRef.current = handleNextPlayer;
+
   // Pause / Resume (atomic batch)
   const handleTogglePause = async () => {
     if (!auctionState) return;
+    clearAutoNextTimer();
     const newStatus = auctionState.status === 'live' ? 'paused' : 'live';
     const now = new Date().toISOString();
     try {
@@ -652,6 +764,7 @@ export function AdminLiveAuctionControl({
 
   // Finish Auction (atomic batch)
   const handleFinishAuction = async () => {
+    clearAutoNextTimer();
     try {
       const now = new Date().toISOString();
       const batch = writeBatch(db);
@@ -683,6 +796,7 @@ export function AdminLiveAuctionControl({
     <div className="min-h-screen bg-[#060c16] text-white p-4 sm:p-6 lg:p-8 selection:bg-[#f5d77f] selection:text-[#060c16]">
       <CelebrationConfetti active={showCelebration} />
       <PlayerDecisionPopup auctionState={auctionState} teams={teams} />
+      <UnsoldRoundBanner auctionState={auctionState} />
 
       {/* TOP HEADER */}
       <header className="max-w-7xl mx-auto flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-5 border-b border-[#162b4a]">

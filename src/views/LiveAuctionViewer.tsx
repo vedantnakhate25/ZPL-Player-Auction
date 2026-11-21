@@ -5,6 +5,7 @@ import { TeamPurseBoard } from '../components/TeamPurseBoard';
 import { PreAuctionSlideshow } from '../components/PreAuctionSlideshow';
 import { CelebrationConfetti } from '../components/CelebrationConfetti';
 import { PlayerDecisionPopup } from '../components/PlayerDecisionPopup';
+import { UnsoldRoundBanner } from '../components/UnsoldRoundBanner';
 import { SocialFollowStrip } from '../components/SocialFollowStrip';
 import { ZPLBroadcastPlayerStage } from '../components/ZPLBroadcastPlayerStage';
 import {
@@ -397,6 +398,7 @@ export function LiveAuctionViewer({
     >
       <CelebrationConfetti active={showCelebration} />
       <PlayerDecisionPopup auctionState={auctionState} teams={teams} />
+      <UnsoldRoundBanner auctionState={auctionState} />
 
       {/* TOP BAR / HEADER */}
       <header

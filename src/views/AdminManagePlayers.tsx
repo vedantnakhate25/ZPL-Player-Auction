@@ -8,7 +8,8 @@ import {
   onSnapshot,
   setDoc,
   updateDoc,
-  deleteDoc
+  deleteDoc,
+  writeBatch
 } from '../lib/firebase';
 import { compressImage } from '../lib/imageUtils';
 import type { Player, PlayerRole } from '../types/auction';
@@ -46,6 +47,15 @@ const PRESET_PLAYER_PHOTOS = [
   'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=600&auto=format&fit=crop&q=80',
   'https://images.unsplash.com/photo-1522075469751-3a6694fb2f61?w=600&auto=format&fit=crop&q=80'
 ];
+
+function shuffleArray<T>(items: T[]): T[] {
+  const arr = [...items];
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
 
 export function AdminManagePlayers({
   auctionId,
@@ -92,7 +102,7 @@ export function AdminManagePlayers({
         clearTimeout(safetyTimer);
         const list: Player[] = [];
         snap.forEach((d) => list.push({ id: d.id, ...d.data() } as Player));
-        list.sort((a, b) => a.order - b.order);
+        list.sort((a, b) => (a.slotNumber || 1) - (b.slotNumber || 1) || (a.order ?? 0) - (b.order ?? 0));
         setPlayers(list);
         setLoading(false);
       },
@@ -196,7 +206,10 @@ export function AdminManagePlayers({
     const cleanSlotName = slotName.trim();
 
     if (editingPlayer) {
-      const updatedPlayer: Player = {
+      const slotChanged = (editingPlayer.slotNumber || 1) !== cleanSlotNum;
+      const shouldJumbleSlot = slotChanged && editingPlayer.status === 'upcoming';
+
+      const baseUpdatedPlayer: Player = {
         ...editingPlayer,
         name: cleanName,
         role,
@@ -207,27 +220,77 @@ export function AdminManagePlayers({
         updatedAt: now
       };
 
-      // Optimistic instant update - no loading wait!
-      setPlayers((prev) =>
-        prev.map((p) => (p.id === editingPlayer.id ? updatedPlayer : p))
-      );
-      setShowAddModal(false);
+      if (shouldJumbleSlot) {
+        const peersInTargetSlot = players.filter(
+          (p) =>
+            p.id !== editingPlayer.id &&
+            p.status === 'upcoming' &&
+            (p.slotNumber || 1) === cleanSlotNum
+        );
+        const shuffledSlotPlayers = shuffleArray([...peersInTargetSlot, baseUpdatedPlayer]).map(
+          (p, idx) => ({
+            ...p,
+            order: cleanSlotNum * 10000 + (idx + 1),
+            updatedAt: now
+          })
+        );
+        const updatedMap = new Map(shuffledSlotPlayers.map((p) => [p.id, p]));
 
-      // Save in background
-      updateDoc(doc(db, 'players', editingPlayer.id), {
-        name: cleanName,
-        role,
-        photoUrl: finalPhoto,
-        basePoints: pointsNum,
-        slotNumber: cleanSlotNum,
-        slotName: cleanSlotName,
-        updatedAt: now
-      }).catch((err) => {
-        console.error('Background player update failed:', err);
-      });
+        setPlayers((prev) => {
+          const list = prev.map((p) => updatedMap.get(p.id) || p);
+          list.sort((a, b) => (a.slotNumber || 1) - (b.slotNumber || 1) || (a.order ?? 0) - (b.order ?? 0));
+          return list;
+        });
+        setShowAddModal(false);
+
+        const batch = writeBatch(db);
+        shuffledSlotPlayers.forEach((p) => {
+          if (p.id === editingPlayer.id) {
+            batch.update(doc(db, 'players', p.id), {
+              name: cleanName,
+              role,
+              photoUrl: finalPhoto,
+              basePoints: pointsNum,
+              slotNumber: cleanSlotNum,
+              slotName: cleanSlotName,
+              order: p.order,
+              updatedAt: now
+            });
+          } else {
+            batch.update(doc(db, 'players', p.id), {
+              order: p.order,
+              updatedAt: now
+            });
+          }
+        });
+        batch.commit().catch((err) => {
+          console.error('Background player update & slot jumble failed:', err);
+        });
+      } else {
+        // Optimistic instant update - no loading wait!
+        setPlayers((prev) => {
+          const list = prev.map((p) => (p.id === editingPlayer.id ? baseUpdatedPlayer : p));
+          list.sort((a, b) => (a.slotNumber || 1) - (b.slotNumber || 1) || (a.order ?? 0) - (b.order ?? 0));
+          return list;
+        });
+        setShowAddModal(false);
+
+        // Save in background
+        updateDoc(doc(db, 'players', editingPlayer.id), {
+          name: cleanName,
+          role,
+          photoUrl: finalPhoto,
+          basePoints: pointsNum,
+          slotNumber: cleanSlotNum,
+          slotName: cleanSlotName,
+          updatedAt: now
+        }).catch((err) => {
+          console.error('Background player update failed:', err);
+        });
+      }
     } else {
       const playerId = `player-${Date.now()}`;
-      const newPlayer: Player = {
+      const newPlayerBase: Player = {
         id: playerId,
         auctionId,
         name: cleanName,
@@ -237,22 +300,50 @@ export function AdminManagePlayers({
         slotNumber: cleanSlotNum,
         slotName: cleanSlotName,
         status: 'upcoming',
-        order: players.length + 1,
+        order: cleanSlotNum * 10000 + 1,
         round: 'regular',
         createdAt: now
       };
 
+      // Automatically jumble all upcoming players inside this slot
+      const existingUpcomingInSlot = players.filter(
+        (p) => p.status === 'upcoming' && (p.slotNumber || 1) === cleanSlotNum
+      );
+      const shuffledSlotPlayers = shuffleArray([...existingUpcomingInSlot, newPlayerBase]).map(
+        (p, idx) => ({
+          ...p,
+          order: cleanSlotNum * 10000 + (idx + 1),
+          updatedAt: now
+        })
+      );
+      const shuffledMap = new Map(shuffledSlotPlayers.map((p) => [p.id, p]));
+      const finalNewPlayer = shuffledMap.get(playerId) || newPlayerBase;
+
       // Optimistic instant update - no waiting or spinner!
       setPlayers((prev) => {
-        const list = [...prev.filter((p) => p.id !== playerId), newPlayer];
-        list.sort((a, b) => a.order - b.order);
+        const updatedPrev = prev
+          .filter((p) => p.id !== playerId)
+          .map((p) => shuffledMap.get(p.id) || p);
+        const list = [...updatedPrev, finalNewPlayer];
+        list.sort((a, b) => (a.slotNumber || 1) - (b.slotNumber || 1) || (a.order ?? 0) - (b.order ?? 0));
         return list;
       });
       setShowAddModal(false);
 
-      // Save in background
-      setDoc(doc(db, 'players', playerId), newPlayer).catch((err) => {
-        console.error('Background player registration failed:', err);
+      // Persist new player + jumbled slot orders atomically
+      const batch = writeBatch(db);
+      shuffledSlotPlayers.forEach((p) => {
+        if (p.id === playerId) {
+          batch.set(doc(db, 'players', playerId), p);
+        } else {
+          batch.update(doc(db, 'players', p.id), {
+            order: p.order,
+            updatedAt: now
+          });
+        }
+      });
+      batch.commit().catch((err) => {
+        console.error('Background player registration & slot jumble failed:', err);
       });
     }
   };
@@ -506,7 +597,7 @@ export function AdminManagePlayers({
                       </label>
                     </div>
                     <span className="text-[10px] font-bold text-[#f5d77f]/85 uppercase tracking-wider">
-                      Admin Defined
+                      Auto-Jumbled In Slot
                     </span>
                   </div>
 
