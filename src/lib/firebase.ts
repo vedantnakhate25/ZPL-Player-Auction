@@ -24,6 +24,7 @@ import {
   query,
   where,
   orderBy,
+  writeBatch,
   type DocumentData
 } from 'firebase/firestore';
 import firebaseConfig from '../../firebase-applet-config.json';
@@ -115,5 +116,6 @@ export {
   deleteDoc,
   query,
   where,
-  orderBy
+  orderBy,
+  writeBatch
 };

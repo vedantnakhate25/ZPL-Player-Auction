@@ -245,11 +245,11 @@ function TeamPurseBoardComponent({
         <div
           role="dialog"
           aria-modal="true"
-          className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-[#040811]/85 backdrop-blur-md animate-in fade-in duration-200"
+          className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-[#040811]/90"
           onClick={() => setSelectedTeam(null)}
         >
           <div
-            className="relative w-full max-w-lg max-h-[90vh] bg-[#0a1526] border border-[#f5d77f]/30 rounded-3xl shadow-2xl overflow-hidden flex flex-col text-white"
+            className="relative w-full max-w-lg max-h-[90vh] bg-[#0a1526] border border-[#f5d77f]/35 rounded-3xl shadow-2xl overflow-hidden flex flex-col text-white"
             onClick={(e) => e.stopPropagation()}
           >
             {/* MODAL HEADER */}

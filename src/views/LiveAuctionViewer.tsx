@@ -1,7 +1,6 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { onSnapshot, doc, collection, query, where, db } from '../lib/firebase';
 import type { Auction, AuctionState, Team, Player } from '../types/auction';
-import { Player3DCard } from '../components/Player3DCard';
 import { TeamPurseBoard } from '../components/TeamPurseBoard';
 import { PreAuctionSlideshow } from '../components/PreAuctionSlideshow';
 import { CelebrationConfetti } from '../components/CelebrationConfetti';
@@ -16,8 +15,6 @@ import {
   Clock,
   CheckCircle2,
   AlertTriangle,
-  RotateCcw,
-  Sparkles,
   Volume2,
   VolumeX,
   Share2,
@@ -31,7 +28,7 @@ interface LiveAuctionViewerProps {
   onNavigateHome?: () => void;
 }
 
-// Global singleton AudioContext to prevent memory/hardware leaks across thousands of bids
+// Global singleton AudioContext to prevent hardware/memory leaks across rapid bids
 let globalAudioCtx: AudioContext | null = null;
 function getSharedAudioContext(): AudioContext | null {
   if (typeof window === 'undefined') return null;
@@ -69,64 +66,75 @@ export function LiveAuctionViewer({
   const [copiedLink, setCopiedLink] = useState(false);
   const [projectorPreView, setProjectorPreView] = useState<'slideshow' | 'teams'>('slideshow');
 
+  // Refs prevent stale closures inside Firestore listeners and avoid duplicate sound/confetti fires
+  const soundEnabledRef = useRef(soundEnabled);
+  soundEnabledRef.current = soundEnabled;
+  const lastEventKeyRef = useRef<string | null>(null);
+  const lastBidKeyRef = useRef<string | null>(null);
+  const celebrationTimerRef = useRef<number | null>(null);
+
   // Real-time live viewer counter and heartbeat beacon
   const liveViewerCount = useLiveViewers(auctionId, true);
 
-  // Summary counts (memoized for instantaneous 60fps rendering without re-calculation lag)
+  // Summary counts (memoized for smooth rendering)
   const totalPlayers = players.length;
-  const { soldCount, unsoldCount, upcomingCount } = useMemo(() => {
+  const { soldCount } = useMemo(() => {
     let sold = 0;
-    let unsold = 0;
-    let upcoming = 0;
     for (let i = 0; i < players.length; i++) {
-      const st = players[i]?.status;
-      if (st === 'sold') sold++;
-      else if (st === 'unsold') unsold++;
-      else if (st === 'upcoming') upcoming++;
+      if (players[i]?.status === 'sold') sold++;
     }
-    return { soldCount: sold, unsoldCount: unsold, upcomingCount: upcoming };
+    return { soldCount: sold };
   }, [players]);
 
-  // Sound beep / celebration chime (Web Audio API - clean, self-contained, no external mp3 files)
-  const playSoundEffect = (type: 'sold' | 'unsold' | 'bid') => {
-    if (!soundEnabled) return;
+  const playSoundEffect = useCallback((type: 'sold' | 'unsold' | 'bid') => {
+    if (!soundEnabledRef.current) return;
     try {
       const ctx = getSharedAudioContext();
       if (!ctx) return;
 
       if (type === 'sold') {
-        // High celebratory fan-fare chord
-        const notes = [523.25, 659.25, 783.99, 1046.5]; // C5, E5, G5, C6
+        const notes = [523.25, 659.25, 783.99, 1046.5];
         notes.forEach((freq, idx) => {
           const osc = ctx.createOscillator();
           const gain = ctx.createGain();
           osc.type = 'triangle';
           osc.frequency.value = freq;
-          gain.gain.setValueAtTime(0.15, ctx.currentTime + idx * 0.08);
-          gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + idx * 0.08 + 0.6);
+          gain.gain.setValueAtTime(0.14, ctx.currentTime + idx * 0.08);
+          gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + idx * 0.08 + 0.55);
           osc.connect(gain);
           gain.connect(ctx.destination);
           osc.start(ctx.currentTime + idx * 0.08);
-          osc.stop(ctx.currentTime + idx * 0.08 + 0.65);
+          osc.stop(ctx.currentTime + idx * 0.08 + 0.6);
         });
       } else if (type === 'unsold') {
-        // Low double descending buzzer
         const osc = ctx.createOscillator();
         const gain = ctx.createGain();
         osc.type = 'sawtooth';
         osc.frequency.setValueAtTime(220, ctx.currentTime);
-        osc.frequency.linearRampToValueAtTime(140, ctx.currentTime + 0.4);
-        gain.gain.setValueAtTime(0.18, ctx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.45);
+        osc.frequency.linearRampToValueAtTime(140, ctx.currentTime + 0.35);
+        gain.gain.setValueAtTime(0.14, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.4);
         osc.connect(gain);
         gain.connect(ctx.destination);
         osc.start(ctx.currentTime);
-        osc.stop(ctx.currentTime + 0.45);
+        osc.stop(ctx.currentTime + 0.42);
+      } else if (type === 'bid') {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(680, ctx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(880, ctx.currentTime + 0.07);
+        gain.gain.setValueAtTime(0.08, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.12);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(ctx.currentTime);
+        osc.stop(ctx.currentTime + 0.13);
       }
     } catch {
-      // AudioContext muted/unsupported in some iframe policies
+      // AudioContext muted/unsupported in restricted environments
     }
-  };
+  }, []);
 
   // 1. Real-time Subscription to Auction Doc
   useEffect(() => {
@@ -140,8 +148,7 @@ export function LiveAuctionViewer({
     setIsNotFoundConfirmed(false);
     setConnectionSlow(false);
 
-    // After 6s, show helpful reconnection helper without declaring premature failure
-    const slowTimer = setTimeout(() => {
+    const slowTimer = window.setTimeout(() => {
       setConnectionSlow(true);
     }, 6000);
 
@@ -159,13 +166,12 @@ export function LiveAuctionViewer({
       },
       (error) => {
         console.warn('Auction live subscription notice:', error);
-        // On network retry, do not mark as not found
         setIsConnecting(false);
       }
     );
 
     return () => {
-      clearTimeout(slowTimer);
+      window.clearTimeout(slowTimer);
       unsubAuction();
     };
   }, [auctionId]);
@@ -173,6 +179,9 @@ export function LiveAuctionViewer({
   // 2. Real-time Subscription to AuctionState Doc
   useEffect(() => {
     if (!auctionId || typeof auctionId !== 'string') return;
+    lastEventKeyRef.current = null;
+    lastBidKeyRef.current = null;
+
     const unsubState = onSnapshot(
       doc(db, 'auctionState', auctionId),
       (snap) => {
@@ -180,13 +189,29 @@ export function LiveAuctionViewer({
           const data = { id: snap.id, ...snap.data() } as AuctionState;
           setAuctionState(data);
 
-          if (data.playerStatus === 'sold') {
-            setShowCelebration(true);
-            playSoundEffect('sold');
-            const timer = setTimeout(() => setShowCelebration(false), 5000);
-            return () => clearTimeout(timer);
-          } else if (data.playerStatus === 'unsold') {
-            playSoundEffect('unsold');
+          if (data.playerStatus === 'sold' || data.playerStatus === 'unsold') {
+            const eventKey = `${data.playerStatus}_${data.currentPlayerId}_${data.updatedAt || ''}`;
+            if (lastEventKeyRef.current !== eventKey) {
+              lastEventKeyRef.current = eventKey;
+              if (data.playerStatus === 'sold') {
+                setShowCelebration(true);
+                playSoundEffect('sold');
+                if (celebrationTimerRef.current) {
+                  window.clearTimeout(celebrationTimerRef.current);
+                }
+                celebrationTimerRef.current = window.setTimeout(() => {
+                  setShowCelebration(false);
+                }, 4000);
+              } else {
+                playSoundEffect('unsold');
+              }
+            }
+          } else if (data.playerStatus === 'bidding' && data.winningTeamId) {
+            const bidKey = `${data.currentPlayerId}_${data.winningTeamId}_${data.currentBidPoints}`;
+            if (lastBidKeyRef.current && lastBidKeyRef.current !== bidKey) {
+              playSoundEffect('bid');
+            }
+            lastBidKeyRef.current = bidKey;
           }
         }
       },
@@ -195,8 +220,13 @@ export function LiveAuctionViewer({
       }
     );
 
-    return () => unsubState();
-  }, [auctionId]);
+    return () => {
+      unsubState();
+      if (celebrationTimerRef.current) {
+        window.clearTimeout(celebrationTimerRef.current);
+      }
+    };
+  }, [auctionId, playSoundEffect]);
 
   // 3. Real-time Subscription to Teams
   useEffect(() => {
@@ -209,7 +239,6 @@ export function LiveAuctionViewer({
         snap.forEach((d) => {
           teamList.push({ id: d.id, ...d.data() } as Team);
         });
-        // Sort alphabetically or by remaining purse
         teamList.sort((a, b) => b.remainingPurse - a.remainingPurse);
         setTeams(teamList);
       },
@@ -243,16 +272,16 @@ export function LiveAuctionViewer({
     return () => unsubPlayers();
   }, [auctionId]);
 
-  // Full Screen API trigger
   const toggleProjectorMode = () => {
-    setIsProjectorMode(!isProjectorMode);
-    if (!document.fullscreenElement && !isProjectorMode) {
-      document.documentElement.requestFullscreen().catch(() => {
-        // Fallback inside restricted iframe
-      });
-    } else if (document.fullscreenElement) {
-      document.exitFullscreen().catch(() => {});
-    }
+    setIsProjectorMode((prev) => {
+      const next = !prev;
+      if (!document.fullscreenElement && next) {
+        document.documentElement.requestFullscreen().catch(() => {});
+      } else if (document.fullscreenElement && !next) {
+        document.exitFullscreen().catch(() => {});
+      }
+      return next;
+    });
   };
 
   const copyViewerLink = async () => {
@@ -262,17 +291,17 @@ export function LiveAuctionViewer({
         await navigator.share({
           title: auction ? `${auction.name} - Live Cricket Auction` : 'ZPL Live Cricket Auction',
           text: `Watch the official live player auction stream for ${auction?.name || 'ZPL'}!`,
-          url: url,
+          url
         });
         return;
       } catch {
-        // User cancelled share or device dismissed dialog; fallback to clipboard
+        // Fallback to clipboard
       }
     }
     if (navigator.clipboard) {
       navigator.clipboard.writeText(url).then(() => {
         setCopiedLink(true);
-        setTimeout(() => setCopiedLink(false), 2000);
+        window.setTimeout(() => setCopiedLink(false), 2000);
       });
     }
   };
@@ -280,25 +309,25 @@ export function LiveAuctionViewer({
   if (isConnecting && !auction) {
     return (
       <div className="min-h-screen bg-[#060c16] flex flex-col items-center justify-center text-white p-6 text-center">
-        <div className="w-12 h-12 border-4 border-[#f5d77f] border-t-transparent rounded-full animate-spin mb-4" />
+        <div className="w-11 h-11 border-4 border-[#f5d77f] border-t-transparent rounded-full animate-spin mb-4" />
         <h3 className="text-xl font-black text-white tracking-wide">
-          Connecting to Live Auction Stream...
+          Connecting to Live Auction...
         </h3>
         <p className="text-[#a1b3cb] text-xs sm:text-sm mt-1 max-w-sm mx-auto">
           Synchronizing real-time bids, team purses, and player stage.
         </p>
         {connectionSlow && (
-          <div className="mt-5 flex flex-col sm:flex-row items-center justify-center gap-2">
+          <div className="mt-5 flex items-center justify-center gap-2.5">
             <button
               onClick={() => window.location.reload()}
-              className="px-4 py-2 rounded-xl bg-gradient-to-r from-[#fae29c] via-[#f5d77f] to-[#e0bc50] hover:from-[#fff0b8] hover:to-[#ebc860] text-[#060c16] text-xs font-black shadow-md cursor-pointer transition-all active:scale-95"
+              className="px-4 py-2 rounded-xl bg-gradient-to-r from-[#fae29c] via-[#f5d77f] to-[#e0bc50] text-[#060c16] text-xs font-black cursor-pointer"
             >
               Refresh Stream
             </button>
             {onNavigateHome && (
               <button
                 onClick={onNavigateHome}
-                className="px-4 py-2 rounded-xl bg-[#0a1526] border border-[#13243f] text-[#c5d3e8] text-xs font-bold hover:text-white cursor-pointer"
+                className="px-4 py-2 rounded-xl bg-[#0a1526] border border-[#162b4a] text-[#c5d3e8] text-xs font-bold hover:text-white cursor-pointer"
               >
                 Back to Auctions
               </button>
@@ -312,15 +341,15 @@ export function LiveAuctionViewer({
   if (!auction && isNotFoundConfirmed) {
     return (
       <div className="min-h-screen bg-[#060c16] flex flex-col items-center justify-center text-white p-6 text-center">
-        <AlertTriangle className="w-16 h-16 text-[#f5d77f] mb-4" />
+        <AlertTriangle className="w-14 h-14 text-[#f5d77f] mb-4" />
         <h2 className="text-2xl font-bold mb-2">Auction Not Found</h2>
-        <p className="text-[#a1b3cb] max-w-md mb-6">
-          The auction ID "{auctionId}" does not exist or may have been deleted.
+        <p className="text-[#a1b3cb] max-w-md mb-6 text-sm">
+          The requested auction does not exist or may have been removed.
         </p>
         {onNavigateHome && (
           <button
             onClick={onNavigateHome}
-            className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-[#fae29c] via-[#f5d77f] to-[#e0bc50] text-[#060c16] font-bold transition-colors shadow-md hover:from-[#fff0b8] hover:to-[#ebc860] cursor-pointer"
+            className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-[#fae29c] via-[#f5d77f] to-[#e0bc50] text-[#060c16] font-black text-sm cursor-pointer"
           >
             Go to Auction Home
           </button>
@@ -332,22 +361,19 @@ export function LiveAuctionViewer({
   if (!auction) {
     return (
       <div className="min-h-screen bg-[#060c16] flex flex-col items-center justify-center text-white p-6 text-center">
-        <div className="w-12 h-12 border-4 border-[#f5d77f] border-t-transparent rounded-full animate-spin mb-4" />
+        <div className="w-11 h-11 border-4 border-[#f5d77f] border-t-transparent rounded-full animate-spin mb-4" />
         <h3 className="text-xl font-black text-white">Reconnecting to Auction...</h3>
-        <p className="text-[#a1b3cb] text-xs sm:text-sm mt-1 mb-5">
-          Live stream connection interrupted. Attempting to restore...
-        </p>
-        <div className="flex items-center justify-center gap-2">
+        <div className="mt-5 flex items-center justify-center gap-2.5">
           <button
             onClick={() => window.location.reload()}
-            className="px-5 py-2 rounded-xl bg-gradient-to-r from-[#fae29c] via-[#f5d77f] to-[#e0bc50] text-[#060c16] font-black text-xs cursor-pointer shadow-md hover:from-[#fff0b8] hover:to-[#ebc860]"
+            className="px-5 py-2 rounded-xl bg-gradient-to-r from-[#fae29c] via-[#f5d77f] to-[#e0bc50] text-[#060c16] font-black text-xs cursor-pointer"
           >
             Retry Connection
           </button>
           {onNavigateHome && (
             <button
               onClick={onNavigateHome}
-              className="px-4 py-2 rounded-xl bg-[#0a1526] border border-[#13243f] text-[#c5d3e8] text-xs font-bold hover:text-white cursor-pointer"
+              className="px-4 py-2 rounded-xl bg-[#0a1526] border border-[#162b4a] text-[#c5d3e8] text-xs font-bold hover:text-white cursor-pointer"
             >
               Back to Home
             </button>
@@ -361,7 +387,7 @@ export function LiveAuctionViewer({
     <div
       className={`bg-[#060c16] text-white selection:bg-[#f5d77f] selection:text-[#060c16] flex flex-col justify-between ${
         isProjectorMode
-          ? 'h-screen max-h-screen w-screen overflow-hidden p-1.5 sm:p-2 select-none'
+          ? 'h-screen max-h-screen w-screen overflow-hidden p-2 select-none'
           : 'min-h-screen p-4 sm:p-6 lg:p-8'
       }`}
     >
@@ -370,59 +396,60 @@ export function LiveAuctionViewer({
 
       {/* TOP BAR / HEADER */}
       <header
-        className={`w-full max-w-7xl mx-auto flex flex-col md:flex-row md:items-center md:justify-between gap-2 border-b border-[#13243f] shrink-0 ${
-          isProjectorMode ? 'py-1 mb-1' : 'pb-4 mb-6'
+        className={`w-full max-w-7xl mx-auto flex flex-col md:flex-row md:items-center md:justify-between gap-3 border-b border-[#162b4a] shrink-0 ${
+          isProjectorMode ? 'pb-1.5 mb-1.5' : 'pb-4 mb-6'
         }`}
       >
-        {/* Left Side: Back button + Title & Info */}
-        <div className="flex items-center justify-between md:justify-start gap-2.5 sm:gap-3 min-w-0">
-          <div className="flex items-center gap-2 sm:gap-3 min-w-0">
-            {/* BACK TO HOME OPTION */}
+        {/* Left: Back + Title & Date */}
+        <div className="flex items-center justify-between md:justify-start gap-3 min-w-0">
+          <div className="flex items-center gap-3 min-w-0">
             {onNavigateHome && (
               <button
                 onClick={onNavigateHome}
-                className="h-9 flex items-center gap-1.5 px-3 rounded-xl bg-[#081220] hover:bg-[#0e1f38] border border-[#f5d77f]/40 hover:border-[#f5d77f] text-[#f5d77f] hover:text-[#fff4c2] font-black text-xs sm:text-sm transition-all shadow-md active:scale-95 shrink-0 cursor-pointer"
-                title="Back to Home Screen"
+                className="h-9 flex items-center gap-1.5 px-3 rounded-xl bg-[#0a1526] hover:bg-[#10223d] border border-[#f5d77f]/35 text-[#f5d77f] font-bold text-xs sm:text-sm transition-colors shrink-0 cursor-pointer whitespace-nowrap"
+                title="Back to Home"
               >
-                <ArrowLeft className="w-4 h-4 text-[#f5d77f] shrink-0" />
-                <span className="hidden xs:inline">Back</span>
+                <ArrowLeft className="w-4 h-4 shrink-0" />
+                <span className="hidden sm:inline">Back</span>
               </button>
             )}
 
             <div className="min-w-0">
               <h1
                 className={`font-black text-white truncate tracking-tight ${
-                  isProjectorMode
-                    ? 'text-base sm:text-xl md:text-2xl'
-                    : 'text-base sm:text-2xl md:text-3xl'
+                  isProjectorMode ? 'text-base sm:text-xl' : 'text-lg sm:text-2xl'
                 }`}
               >
                 {auction.name}
               </h1>
-              <div className="flex items-center gap-2 text-[10px] sm:text-xs text-[#a1b3cb] mt-0.5">
-                <span className="flex items-center gap-1">
+              <div className="flex items-center gap-2 text-[11px] sm:text-xs text-[#a1b3cb] mt-0.5">
+                <span className="inline-flex items-center gap-1 whitespace-nowrap">
                   <Calendar className="w-3 h-3 text-[#f5d77f]" />
                   {auction.date}
                 </span>
-                <span className="flex items-center gap-1">
+                <span aria-hidden="true">&middot;</span>
+                <span className="inline-flex items-center gap-1 whitespace-nowrap">
                   <Clock className="w-3 h-3 text-[#f5d77f]" />
                   {auction.time}
                 </span>
                 {auctionState?.round === 'unsold' && (
-                  <span className="px-1.5 py-0.5 rounded bg-rose-600 text-white font-black text-[9px] uppercase shadow-sm">
-                    Unsold Round
-                  </span>
+                  <>
+                    <span aria-hidden="true">&middot;</span>
+                    <span className="text-rose-400 font-bold uppercase whitespace-nowrap">
+                      Unsold Round
+                    </span>
+                  </>
                 )}
               </div>
             </div>
           </div>
 
-          {/* Action buttons on mobile (Sound, Share, Fullscreen) aligned cleanly on top right */}
+          {/* Mobile Controls */}
           <div className="flex items-center gap-1.5 md:hidden shrink-0">
             <button
-              onClick={() => setSoundEnabled(!soundEnabled)}
-              title={soundEnabled ? 'Mute Sounds' : 'Enable Audio Chimes'}
-              className="h-9 w-9 rounded-xl bg-[#081220] border border-[#13243f] text-[#c5d3e8] hover:text-white flex items-center justify-center transition-colors cursor-pointer"
+              onClick={() => setSoundEnabled((s) => !s)}
+              title={soundEnabled ? 'Mute Audio' : 'Unmute Audio'}
+              className="h-9 w-9 rounded-xl bg-[#0a1526] border border-[#162b4a] text-[#c5d3e8] flex items-center justify-center cursor-pointer"
             >
               {soundEnabled ? (
                 <Volume2 className="w-4 h-4 text-[#f5d77f]" />
@@ -432,79 +459,65 @@ export function LiveAuctionViewer({
             </button>
             <button
               onClick={copyViewerLink}
-              title="Copy Public Viewer Link"
-              className="h-9 w-9 rounded-xl bg-[#081220] border border-[#13243f] text-white flex items-center justify-center transition-colors cursor-pointer"
+              title="Share Live Link"
+              className="h-9 w-9 rounded-xl bg-[#0a1526] border border-[#162b4a] text-white flex items-center justify-center cursor-pointer"
             >
               <Share2 className="w-4 h-4 text-[#f5d77f]" />
             </button>
             <button
               onClick={toggleProjectorMode}
               title="Toggle Projector Mode"
-              className={`h-9 px-2.5 rounded-xl font-black text-xs transition-all flex items-center gap-1 cursor-pointer ${
+              className={`h-9 w-9 rounded-xl flex items-center justify-center cursor-pointer ${
                 isProjectorMode
-                  ? 'bg-gradient-to-r from-[#fae29c] via-[#f5d77f] to-[#e0bc50] text-[#060c16] border border-[#fff4c2]'
-                  : 'bg-[#081220] text-[#f5d77f] border border-[#f5d77f]/40'
+                  ? 'bg-[#f5d77f] text-[#060c16]'
+                  : 'bg-[#0a1526] text-[#f5d77f] border border-[#f5d77f]/35'
               }`}
             >
-              {isProjectorMode ? <Minimize2 className="w-3.5 h-3.5" /> : <Maximize2 className="w-3.5 h-3.5 text-[#f5d77f]" />}
+              {isProjectorMode ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
             </button>
           </div>
         </div>
 
-        {/* Center / Right Badges & Desktop Controls */}
-        <div className="flex items-center justify-between md:justify-end gap-2 shrink-0">
-          <div className="flex items-center gap-2">
-            {/* LIVE BEACON */}
+        {/* Right: Live Status, Viewer Count & Desktop Controls */}
+        <div className="flex items-center justify-between md:justify-end gap-3 shrink-0">
+          <div className="flex items-center gap-3 text-xs">
             {auctionState?.status === 'live' ? (
-              <div className="h-8 flex items-center gap-1.5 px-3 rounded-full bg-red-600 border border-red-400/50 text-white shadow-md shadow-red-950/40 shrink-0">
-                <span className="relative flex h-2 w-2">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-2 w-2 bg-white"></span>
-                </span>
-                <span className="text-[11px] font-black tracking-widest uppercase">
-                  LIVE
-                </span>
-              </div>
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-red-600 text-white font-black tracking-wider uppercase whitespace-nowrap">
+                <span className="w-2 h-2 rounded-full bg-white" />
+                LIVE
+              </span>
             ) : auctionState?.status === 'paused' ? (
-              <div className="h-8 flex items-center px-3 rounded-full bg-[#f5d77f] text-[#060c16] text-[11px] font-black tracking-widest uppercase shrink-0 shadow-md">
+              <span className="px-2.5 py-1 rounded-lg bg-[#f5d77f] text-[#060c16] font-black tracking-wider uppercase whitespace-nowrap">
                 PAUSED
-              </div>
+              </span>
             ) : auctionState?.status === 'completed' ? (
-              <div className="h-8 flex items-center px-3 rounded-full bg-[#0a1526] border border-[#13243f] text-[#c5d3e8] text-[11px] font-black tracking-widest uppercase shrink-0">
+              <span className="px-2.5 py-1 rounded-lg bg-[#0a1526] border border-[#162b4a] text-[#c5d3e8] font-bold tracking-wider uppercase whitespace-nowrap">
                 COMPLETED
-              </div>
+              </span>
             ) : (
-              <div className="h-8 flex items-center px-3 rounded-full bg-[#0a1526] border border-[#f5d77f]/40 text-[#f5d77f] text-[11px] font-black tracking-widest uppercase shrink-0">
+              <span className="px-2.5 py-1 rounded-lg bg-[#0a1526] border border-[#f5d77f]/35 text-[#f5d77f] font-bold tracking-wider uppercase whitespace-nowrap">
                 SCHEDULED
-              </div>
+              </span>
             )}
 
-            {/* REAL-TIME LIVE VIEWERS WATCHING BADGE */}
             <div
-              className="h-8 flex items-center gap-1.5 px-3 rounded-full bg-[#081220] border border-[#f5d77f]/30 text-white shadow-xs shrink-0"
-              title="Active viewers watching this auction in real time"
+              className="inline-flex items-center gap-1.5 text-[#c5d3e8] font-semibold whitespace-nowrap tabular-nums"
+              title="Active viewers watching live"
             >
-              <span className="relative flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-              </span>
               <Eye className="w-3.5 h-3.5 text-emerald-400" />
-              <span className="text-[11px] font-black">
-                {formatViewerCount(liveViewerCount)} <span className="font-semibold text-[#a1b3cb]">watching</span>
-              </span>
+              <span className="font-bold text-white">{formatViewerCount(liveViewerCount)}</span>
+              <span className="text-[#a1b3cb]">watching</span>
             </div>
           </div>
 
-          {/* DESKTOP CONTROLS */}
           <div className="hidden md:flex items-center gap-2">
-            {/* PROJECTOR PRE-AUCTION SWITCHER */}
             {isProjectorMode && (!auctionState?.currentPlayerId || auctionState?.status !== 'live') && (
-              <div className="inline-flex p-0.5 rounded-xl bg-[#081220] border border-[#13243f] text-xs font-bold text-white shadow-xs">
+              <div className="inline-flex p-0.5 rounded-xl bg-[#0a1526] border border-[#162b4a] text-xs font-bold">
                 <button
                   onClick={() => setProjectorPreView('slideshow')}
-                  className={`px-2.5 py-1 rounded-lg transition-all text-xs font-bold cursor-pointer ${
+                  className={`px-3 py-1.5 rounded-lg transition-colors cursor-pointer whitespace-nowrap ${
                     projectorPreView === 'slideshow'
-                      ? 'bg-[#f5d77f] text-[#060c16] shadow-sm'
+                      ? 'bg-[#f5d77f] text-[#060c16]'
                       : 'text-[#c5d3e8] hover:text-white'
                   }`}
                 >
@@ -512,9 +525,9 @@ export function LiveAuctionViewer({
                 </button>
                 <button
                   onClick={() => setProjectorPreView('teams')}
-                  className={`px-2.5 py-1 rounded-lg transition-all text-xs font-bold cursor-pointer ${
+                  className={`px-3 py-1.5 rounded-lg transition-colors cursor-pointer whitespace-nowrap ${
                     projectorPreView === 'teams'
-                      ? 'bg-[#f5d77f] text-[#060c16] shadow-sm'
+                      ? 'bg-[#f5d77f] text-[#060c16]'
                       : 'text-[#c5d3e8] hover:text-white'
                   }`}
                 >
@@ -524,9 +537,9 @@ export function LiveAuctionViewer({
             )}
 
             <button
-              onClick={() => setSoundEnabled(!soundEnabled)}
-              title={soundEnabled ? 'Mute Sounds' : 'Enable Audio Chimes'}
-              className="h-9 w-9 rounded-xl bg-[#081220] border border-[#13243f] text-[#c5d3e8] hover:text-white hover:border-[#f5d77f]/40 flex items-center justify-center transition-colors cursor-pointer"
+              onClick={() => setSoundEnabled((s) => !s)}
+              title={soundEnabled ? 'Mute Audio' : 'Unmute Audio'}
+              className="h-9 w-9 rounded-xl bg-[#0a1526] border border-[#162b4a] hover:border-[#f5d77f]/40 flex items-center justify-center transition-colors cursor-pointer"
             >
               {soundEnabled ? (
                 <Volume2 className="w-4 h-4 text-[#f5d77f]" />
@@ -537,19 +550,19 @@ export function LiveAuctionViewer({
 
             <button
               onClick={copyViewerLink}
-              title="Copy Public Viewer Link"
-              className="h-9 flex items-center gap-1.5 px-3 rounded-xl bg-[#081220] border border-[#13243f] text-xs sm:text-sm font-bold text-white hover:border-[#f5d77f]/40 transition-colors shadow-sm cursor-pointer"
+              title="Copy Live Viewer Link"
+              className="h-9 inline-flex items-center gap-1.5 px-3 rounded-xl bg-[#0a1526] border border-[#162b4a] hover:border-[#f5d77f]/40 text-xs font-bold text-white transition-colors cursor-pointer whitespace-nowrap"
             >
               <Share2 className="w-3.5 h-3.5 text-[#f5d77f]" />
-              <span>{copiedLink ? 'Link Copied!' : 'Share'}</span>
+              <span>{copiedLink ? 'Copied' : 'Share'}</span>
             </button>
 
             <button
               onClick={toggleProjectorMode}
-              className={`h-9 flex items-center gap-1.5 px-3.5 rounded-xl font-black text-xs sm:text-sm transition-all shadow-md cursor-pointer ${
+              className={`h-9 inline-flex items-center gap-1.5 px-3.5 rounded-xl font-black text-xs transition-colors cursor-pointer whitespace-nowrap ${
                 isProjectorMode
-                  ? 'bg-gradient-to-r from-[#fae29c] via-[#f5d77f] to-[#e0bc50] text-[#060c16] border border-[#fff4c2] ring-2 ring-[#f5d77f]/60'
-                  : 'bg-[#081220] hover:bg-[#0e1f38] text-[#f5d77f] border border-[#f5d77f]/40'
+                  ? 'bg-gradient-to-r from-[#fae29c] via-[#f5d77f] to-[#e0bc50] text-[#060c16]'
+                  : 'bg-[#0a1526] hover:bg-[#10223d] text-[#f5d77f] border border-[#f5d77f]/35'
               }`}
             >
               {isProjectorMode ? (
@@ -574,116 +587,81 @@ export function LiveAuctionViewer({
           isProjectorMode ? 'overflow-hidden' : ''
         }`}
       >
-        {/* AUCTION STATUS OVERLAYS */}
         {auctionState?.status === 'completed' ? (
           <div
             className={`w-full text-center ${
               isProjectorMode
                 ? 'h-full flex-1 min-h-0 flex flex-col justify-between overflow-y-auto'
-                : 'max-w-2xl mx-auto py-12 px-6 rounded-3xl bg-[#0a1526] border border-[#f5d77f]/25 shadow-2xl space-y-4'
+                : 'max-w-4xl mx-auto py-8 px-6 rounded-3xl bg-[#0a1526] border border-[#f5d77f]/25 shadow-xl space-y-5'
             }`}
           >
             <div className="shrink-0 space-y-2">
-              <CheckCircle2 className="w-16 h-16 text-[#f5d77f] drop-shadow-[0_0_8px_rgba(245,215,127,0.5)] mx-auto" />
-              <h2 className={`font-black text-white ${isProjectorMode ? 'text-2xl sm:text-3xl' : 'text-3xl sm:text-4xl'}`}>
-                Auction Completed!
-              </h2>
-              <p className="text-[#c5d3e8] text-sm sm:text-base">
-                All players and unsold rounds have concluded. Total players sold:{' '}
-                <strong className="text-[#f5d77f] font-black">{soldCount}</strong> /{' '}
-                {totalPlayers}.
+              <CheckCircle2 className="w-14 h-14 text-[#f5d77f] mx-auto" />
+              <h2 className="text-2xl sm:text-3xl font-black text-white">Auction Completed</h2>
+              <p className="text-[#c5d3e8] text-sm sm:text-base tabular-nums">
+                Players sold: <strong className="text-[#f5d77f] font-black">{soldCount}</strong> /{' '}
+                {totalPlayers}
               </p>
             </div>
-            <div className={`w-full ${isProjectorMode ? 'flex-1 min-h-0 pt-2 overflow-y-auto' : 'pt-4'}`}>
+            <div className={`w-full ${isProjectorMode ? 'flex-1 min-h-0 pt-2 overflow-y-auto' : 'pt-2'}`}>
               <TeamPurseBoard teams={teams} players={players} isProjectorMode={isProjectorMode} />
             </div>
           </div>
-        ) : auctionState?.status === 'scheduled' || auction.status === 'scheduled' || auctionState?.status === 'draft' || (auctionState?.status !== 'live' && !auctionState?.currentPlayerId) ? (
+        ) : auctionState?.status === 'scheduled' ||
+          auction.status === 'scheduled' ||
+          auctionState?.status === 'draft' ||
+          (auctionState?.status !== 'live' && !auctionState?.currentPlayerId) ? (
           isProjectorMode ? (
-            /* PROJECTOR MODE */
             <div className="w-full h-full flex-1 min-h-0 flex flex-col justify-center overflow-hidden">
               {projectorPreView === 'slideshow' ? (
-                <PreAuctionSlideshow
-                  auction={auction}
-                  teams={teams}
-                  isProjectorMode={true}
-                />
+                <PreAuctionSlideshow auction={auction} teams={teams} isProjectorMode={true} />
               ) : (
-                <div className="w-full h-full flex-1 min-h-0 rounded-3xl bg-[#0a1526] border border-[#f5d77f]/25 p-3 sm:p-5 backdrop-blur-md shadow-xl overflow-y-auto">
-                  <TeamPurseBoard
-                    teams={teams}
-                    players={players}
-                    isProjectorMode={true}
-                  />
+                <div className="w-full h-full flex-1 min-h-0 rounded-3xl bg-[#0a1526] border border-[#f5d77f]/25 p-4 sm:p-5 overflow-y-auto">
+                  <TeamPurseBoard teams={teams} players={players} isProjectorMode={true} />
                 </div>
               )}
             </div>
           ) : (
-            /* STANDARD VIEWER: VERTICALLY SCROLLABLE SHOWCASE + TEAMS */
             <div className="w-full space-y-6">
-              <PreAuctionSlideshow
-                auction={auction}
-                teams={teams}
-                isProjectorMode={false}
-              />
-              <div className="rounded-3xl bg-[#0a1526] border border-[#f5d77f]/25 p-4 sm:p-6 backdrop-blur-md shadow-xl">
-                <TeamPurseBoard
-                  teams={teams}
-                  players={players}
-                  isProjectorMode={false}
-                />
+              <PreAuctionSlideshow auction={auction} teams={teams} isProjectorMode={false} />
+              <div className="rounded-3xl bg-[#0a1526] border border-[#f5d77f]/25 p-4 sm:p-6 shadow-xl">
+                <TeamPurseBoard teams={teams} players={players} isProjectorMode={false} />
               </div>
             </div>
           )
         ) : !auctionState?.currentPlayerId ? (
-          /* LIVE AUCTION, WAITING FOR NEXT PLAYER */
           isProjectorMode ? (
             <div className="w-full h-full flex-1 min-h-0 flex flex-col justify-between overflow-hidden">
-              <div className="shrink-0 mb-1 py-1 px-4 rounded-full bg-[#0a1526] border border-[#f5d77f]/40 flex items-center justify-between text-xs text-white max-w-md mx-auto shadow-md">
-                <span className="flex items-center gap-1.5 font-bold text-[#f5d77f]">
-                  <Radio className="w-3.5 h-3.5 text-[#f5d77f] animate-pulse" />
-                  Waiting for Next Player
-                </span>
-                <span className="text-[#a1b3cb]">Live Auction In Progress</span>
+              <div className="shrink-0 mb-1.5 py-1 px-4 rounded-xl bg-[#0a1526] border border-[#f5d77f]/35 flex items-center justify-center gap-2 text-xs text-[#f5d77f] font-bold max-w-sm mx-auto">
+                <Radio className="w-3.5 h-3.5" />
+                <span>Waiting for Next Player</span>
               </div>
               <div className="w-full flex-1 min-h-0">
-                <PreAuctionSlideshow
-                  auction={auction}
-                  teams={teams}
-                  isProjectorMode={true}
-                />
+                <PreAuctionSlideshow auction={auction} teams={teams} isProjectorMode={true} />
               </div>
             </div>
           ) : (
             <div className="w-full space-y-6">
-              <div className="w-full max-w-2xl mx-auto text-center py-10 px-6 rounded-3xl bg-[#0a1526] border border-[#f5d77f]/25 shadow-2xl space-y-3">
-                <Radio className="w-12 h-12 text-[#f5d77f] mx-auto animate-pulse drop-shadow-[0_0_8px_rgba(245,215,127,0.5)]" />
-                <h2 className="text-2xl sm:text-3xl font-black text-white">
-                  Waiting for Next Player
-                </h2>
-                <p className="text-[#c5d3e8] text-sm sm:text-base">
-                  The auction is currently live! The next player will be presented on screen momentarily.
+              <div className="w-full max-w-2xl mx-auto text-center py-8 px-6 rounded-3xl bg-[#0a1526] border border-[#f5d77f]/25 shadow-xl space-y-2.5">
+                <Radio className="w-10 h-10 text-[#f5d77f] mx-auto" />
+                <h2 className="text-2xl font-black text-white">Waiting for Next Player</h2>
+                <p className="text-[#c5d3e8] text-sm">
+                  The auction is live. The next player will appear on stage momentarily.
                 </p>
               </div>
-
-              <PreAuctionSlideshow
-                auction={auction}
-                teams={teams}
-                isProjectorMode={false}
-              />
-
-              <div className="rounded-3xl bg-[#0a1526] border border-[#f5d77f]/25 p-4 sm:p-6 backdrop-blur-md shadow-xl">
-                <TeamPurseBoard
-                  teams={teams}
-                  players={players}
-                  isProjectorMode={false}
-                />
+              <PreAuctionSlideshow auction={auction} teams={teams} isProjectorMode={false} />
+              <div className="rounded-3xl bg-[#0a1526] border border-[#f5d77f]/25 p-4 sm:p-6 shadow-xl">
+                <TeamPurseBoard teams={teams} players={players} isProjectorMode={false} />
               </div>
             </div>
           )
         ) : (
-          /* LIVE BROADCAST ARENA STAGE */
-          <div className={`w-full flex-1 flex flex-col justify-center min-h-0 ${isProjectorMode ? 'py-0 space-y-0 h-full overflow-hidden' : 'py-1 space-y-6'}`}>
+          /* LIVE BROADCAST STAGE */
+          <div
+            className={`w-full flex-1 flex flex-col justify-center min-h-0 ${
+              isProjectorMode ? 'py-0 h-full overflow-hidden' : 'py-1 space-y-6'
+            }`}
+          >
             <ZPLBroadcastPlayerStage
               auction={auction}
               auctionState={auctionState}
@@ -692,7 +670,7 @@ export function LiveAuctionViewer({
               isProjectorMode={isProjectorMode}
             />
             {!isProjectorMode && (
-              <div className="rounded-3xl bg-[#0a1526] border border-[#f5d77f]/25 p-4 sm:p-6 backdrop-blur-md shadow-xl">
+              <div className="rounded-3xl bg-[#0a1526] border border-[#f5d77f]/25 p-4 sm:p-6 shadow-xl">
                 <TeamPurseBoard
                   teams={teams}
                   players={players}
@@ -705,21 +683,15 @@ export function LiveAuctionViewer({
         )}
       </main>
 
-      {/* SOCIAL MEDIA & FOOTER TICKER */}
-      <footer className={`w-full max-w-7xl mx-auto shrink-0 ${
-        isProjectorMode ? 'pt-1 mt-1 border-t border-[#13243f]' : 'pt-6 mt-8 border-t border-[#13243f] space-y-4'
-      }`}>
-        <SocialFollowStrip variant="dark" />
-
-        {!isProjectorMode && (
-          <div className="flex items-center justify-center gap-2 text-xs text-white/60 font-medium text-center">
-            <span className="inline-block w-2.5 h-2.5 rounded-full bg-[#f5d77f] shadow-[0_0_8px_rgba(245,215,127,0.8)] animate-pulse" />
-            <span className="font-bold text-white tracking-wide">
-              ZHEP KRIDA MANDAL (PLAYER AUCTION) &bull; Official Live Broadcast
-            </span>
-          </div>
-        )}
-      </footer>
+      {/* CLEAN FOOTER */}
+      {!isProjectorMode && (
+        <footer className="w-full max-w-7xl mx-auto shrink-0 pt-6 mt-8 border-t border-[#162b4a] space-y-3">
+          <SocialFollowStrip variant="dark" />
+          <p className="text-center text-xs text-[#a1b3cb] font-medium">
+            ZPL &middot; Zhep Premier League (Zhep Krida Mandal)
+          </p>
+        </footer>
+      )}
     </div>
   );
 }

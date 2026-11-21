@@ -1,17 +1,15 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import {
   db,
   doc,
   collection,
   onSnapshot,
   updateDoc,
-  setDoc,
+  writeBatch,
   query,
-  where,
-  handleFirestoreError,
-  OperationType
+  where
 } from '../lib/firebase';
-import type { Auction, AuctionState, Team, Player, PlayerRole } from '../types/auction';
+import type { Auction, AuctionState, Team, Player } from '../types/auction';
 import { CelebrationConfetti } from '../components/CelebrationConfetti';
 import { PlayerDecisionPopup } from '../components/PlayerDecisionPopup';
 import { AdminPreAuctionPhotoManager } from '../components/AdminPreAuctionPhotoManager';
@@ -27,7 +25,6 @@ import {
   Coins,
   Shield,
   AlertCircle,
-  Sparkles,
   Users,
   Eye,
   CheckCircle2,
@@ -57,10 +54,8 @@ export function AdminLiveAuctionControl({
   const [players, setPlayers] = useState<Player[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Real-time live viewer count watching this auction
   const liveViewerCount = useLiveViewers(auctionId, false);
 
-  // Form states for bidding
   const [selectedTeamId, setSelectedTeamId] = useState<string>('');
   const [bidPoints, setBidPoints] = useState<number>(50);
   const [actionError, setActionError] = useState<string | null>(null);
@@ -71,14 +66,31 @@ export function AdminLiveAuctionControl({
   const [mobileTab, setMobileTab] = useState<'desk' | 'teams' | 'queue'>('desk');
   const [showManualAdjuster, setShowManualAdjuster] = useState(false);
 
+  // Refs for zero-lag rapid-fire bidding and clean toast timers
+  const latestBidRef = useRef<{ points: number; teamId: string | null }>({
+    points: 50,
+    teamId: null
+  });
+  const successTimerRef = useRef<number | null>(null);
+  const celebrationTimerRef = useRef<number | null>(null);
+
+  const flashSuccess = (msg: string) => {
+    setActionSuccess(msg);
+    if (successTimerRef.current) window.clearTimeout(successTimerRef.current);
+    successTimerRef.current = window.setTimeout(() => setActionSuccess(null), 3000);
+  };
+
+  useEffect(() => {
+    return () => {
+      if (successTimerRef.current) window.clearTimeout(successTimerRef.current);
+      if (celebrationTimerRef.current) window.clearTimeout(celebrationTimerRef.current);
+    };
+  }, []);
+
   // 1. Subscribe to Auction
   useEffect(() => {
     if (!auctionId) return;
-
-    // Fail-safe timer to prevent loading hang
-    const timer = setTimeout(() => {
-      setLoading(false);
-    }, 1000);
+    const timer = window.setTimeout(() => setLoading(false), 1200);
 
     const unsub = onSnapshot(
       doc(db, 'auctions', auctionId),
@@ -94,7 +106,7 @@ export function AdminLiveAuctionControl({
       }
     );
     return () => {
-      clearTimeout(timer);
+      window.clearTimeout(timer);
       unsub();
     };
   }, [auctionId]);
@@ -108,12 +120,13 @@ export function AdminLiveAuctionControl({
         if (snap.exists()) {
           const state = { id: snap.id, ...snap.data() } as AuctionState;
           setAuctionState(state);
-          if (state.currentBidPoints) {
-            setBidPoints(state.currentBidPoints);
-          }
-          if (state.winningTeamId) {
-            setSelectedTeamId(state.winningTeamId);
-          }
+          const pts = state.currentBidPoints ?? state.currentPlayerBasePoints ?? 50;
+          setBidPoints(pts);
+          setSelectedTeamId(state.winningTeamId || '');
+          latestBidRef.current = {
+            points: pts,
+            teamId: state.winningTeamId || null
+          };
         }
       },
       (err) => {
@@ -165,13 +178,21 @@ export function AdminLiveAuctionControl({
     return () => unsub();
   }, [auctionId]);
 
-  // Filter player groups
-  const currentPlayer = players.find((p) => p.id === auctionState?.currentPlayerId);
-  const upcomingPlayers = players.filter((p) => p.status === 'upcoming');
-  const soldPlayers = players.filter((p) => p.status === 'sold');
-  const unsoldPlayers = players.filter((p) => p.status === 'unsold');
+  // Memoized player groups (zero re-filtering lag during rapid bids)
+  const { currentPlayer, upcomingPlayers, unsoldPlayers } = useMemo(() => {
+    let current: Player | undefined;
+    const upcoming: Player[] = [];
+    const unsold: Player[] = [];
+    for (let i = 0; i < players.length; i++) {
+      const p = players[i];
+      if (p.id === auctionState?.currentPlayerId) current = p;
+      if (p.status === 'upcoming') upcoming.push(p);
+      else if (p.status === 'unsold') unsold.push(p);
+    }
+    return { currentPlayer: current, upcomingPlayers: upcoming, unsoldPlayers: unsold };
+  }, [players, auctionState?.currentPlayerId]);
 
-  // Handle Starting Auction
+  // Start Auction (single atomic batch commit)
   const handleStartAuction = async () => {
     if (!auction) return;
     setSubmitting(true);
@@ -179,7 +200,8 @@ export function AdminLiveAuctionControl({
 
     try {
       const now = new Date().toISOString();
-      const firstPlayer = players.find((p) => p.status === 'upcoming' || p.status === 'current') || players[0];
+      const firstPlayer =
+        players.find((p) => p.status === 'upcoming' || p.status === 'current') || players[0];
 
       if (!firstPlayer) {
         setActionError('Please add players to this auction before starting.');
@@ -187,15 +209,13 @@ export function AdminLiveAuctionControl({
         return;
       }
 
-      // Update player to current
-      await updateDoc(doc(db, 'players', firstPlayer.id), {
+      const batch = writeBatch(db);
+      batch.update(doc(db, 'players', firstPlayer.id), {
         status: 'current',
         updatedAt: now
       });
 
-      // Update Auction state
-      const stateRef = doc(db, 'auctionState', auctionId);
-      await setDoc(stateRef, {
+      batch.set(doc(db, 'auctionState', auctionId), {
         id: auctionId,
         auctionId,
         auctionName: auction.name,
@@ -217,17 +237,18 @@ export function AdminLiveAuctionControl({
         updatedAt: now
       });
 
-      // Update auction status
-      await updateDoc(doc(db, 'auctions', auctionId), {
+      batch.update(doc(db, 'auctions', auctionId), {
         status: 'live',
         round: 'regular',
         updatedAt: now
       });
 
+      await batch.commit();
+
       setBidPoints(firstPlayer.basePoints);
       setSelectedTeamId('');
-      setActionSuccess('Auction is now LIVE!');
-      setTimeout(() => setActionSuccess(null), 3000);
+      latestBidRef.current = { points: firstPlayer.basePoints, teamId: null };
+      flashSuccess('Auction is now LIVE.');
     } catch (err) {
       setActionError(err instanceof Error ? err.message : 'Failed to start auction');
     } finally {
@@ -235,63 +256,104 @@ export function AdminLiveAuctionControl({
     }
   };
 
-  // Update live bid
+  // Manual bid update (optimistic + instant Firestore write)
   const handleUpdateBid = async (newPoints: number, teamId: string) => {
     if (!auctionState || !auctionState.currentPlayerId) return;
 
     if (auctionState.status === 'paused') {
-      setActionError('Auction is currently PAUSED! You must RESUME the auction before placing or updating bids.');
+      setActionError('Auction is paused. Click Resume Auction before placing bids.');
       return;
     }
 
-    setBidPoints(newPoints);
-    setSelectedTeamId(teamId);
-
+    const sanitizedPoints = Math.max(0, Number(newPoints) || 0);
     const team = teams.find((t) => t.id === teamId);
+    const now = new Date().toISOString();
+
+    // Optimistic local state update for zero-lag response
+    setBidPoints(sanitizedPoints);
+    setSelectedTeamId(teamId);
+    latestBidRef.current = { points: sanitizedPoints, teamId: team ? team.id : null };
+    setAuctionState((prev) =>
+      prev
+        ? {
+            ...prev,
+            currentBidPoints: sanitizedPoints,
+            winningTeamId: team ? team.id : null,
+            winningTeamName: team ? team.name : null,
+            winningTeamLogo: team ? team.logoUrl : null,
+            winningTeamRemainingPurse: team ? team.remainingPurse : null,
+            playerStatus: 'bidding',
+            updatedAt: now
+          }
+        : prev
+    );
 
     try {
       await updateDoc(doc(db, 'auctionState', auctionId), {
-        currentBidPoints: Number(newPoints),
+        currentBidPoints: sanitizedPoints,
         winningTeamId: team ? team.id : null,
         winningTeamName: team ? team.name : null,
         winningTeamLogo: team ? team.logoUrl : null,
         winningTeamRemainingPurse: team ? team.remainingPurse : null,
         playerStatus: 'bidding',
-        updatedAt: new Date().toISOString()
+        updatedAt: now
       });
     } catch (err) {
       console.error('Bid update failed:', err);
+      setActionError('Failed to sync bid. Please retry.');
     }
   };
 
-  // Direct 1-Click Team Bidding: Hit particular team button to immediately apply +5 pts (or target points)
-  const handleDirectTeamBid = async (team: Team, targetPoints?: number) => {
+  // Direct 1-Click Team Bidding (+5 PTS or Base) — Optimistic for 0ms lag during rapid bidding wars
+  const handleDirectTeamBid = async (team: Team, explicitPoints?: number) => {
     if (!currentPlayer || !auctionState || !auctionState.currentPlayerId) return;
 
     if (auctionState.status === 'paused') {
-      setActionError('Auction is currently PAUSED! Please click RESUME AUCTION first before placing bids.');
+      setActionError('Auction is paused. Click Resume Auction before placing bids.');
       return;
     }
 
     const basePrice = currentPlayer.basePoints || 50;
-    const currentPrice = auctionState.currentBidPoints && auctionState.winningTeamId
-      ? auctionState.currentBidPoints
+    const hasExistingBidder = Boolean(latestBidRef.current.teamId || auctionState.winningTeamId);
+    const latestPrice = hasExistingBidder
+      ? Math.max(latestBidRef.current.points, auctionState.currentBidPoints || basePrice)
       : basePrice;
 
-    const newBid = targetPoints !== undefined
-      ? targetPoints
-      : (auctionState.winningTeamId ? currentPrice + 5 : basePrice);
+    const newBid =
+      explicitPoints !== undefined
+        ? explicitPoints
+        : hasExistingBidder
+        ? latestPrice + 5
+        : basePrice;
 
     if (team.remainingPurse < newBid) {
       setActionError(
-        `Cannot bid! ${team.name} only has ${team.remainingPurse} PTS remaining in purse (Bid requires ${newBid} PTS).`
+        `Insufficient purse: ${team.name} has ₹ ${team.remainingPurse} PTS left (bid requires ₹ ${newBid} PTS).`
       );
       return;
     }
 
+    const now = new Date().toISOString();
+
+    // Instant optimistic update so rapid clicks never collide or feel laggy
+    latestBidRef.current = { points: newBid, teamId: team.id };
     setBidPoints(newBid);
     setSelectedTeamId(team.id);
     setActionError(null);
+    setAuctionState((prev) =>
+      prev
+        ? {
+            ...prev,
+            currentBidPoints: newBid,
+            winningTeamId: team.id,
+            winningTeamName: team.name,
+            winningTeamLogo: team.logoUrl,
+            winningTeamRemainingPurse: team.remainingPurse,
+            playerStatus: 'bidding',
+            updatedAt: now
+          }
+        : prev
+    );
 
     try {
       await updateDoc(doc(db, 'auctionState', auctionId), {
@@ -301,40 +363,41 @@ export function AdminLiveAuctionControl({
         winningTeamLogo: team.logoUrl,
         winningTeamRemainingPurse: team.remainingPurse,
         playerStatus: 'bidding',
-        updatedAt: new Date().toISOString()
+        updatedAt: now
       });
-      setActionSuccess(`Bid placed: ${team.name} holds highest bid at ₹ ${newBid} PTS`);
-      setTimeout(() => setActionSuccess(null), 3000);
+      flashSuccess(`${team.name} leads at ₹ ${newBid} PTS`);
     } catch (err) {
       console.error('Direct team bid failed:', err);
       setActionError('Failed to record bid. Please try again.');
     }
   };
 
-  // Handle Mark SOLD
+  // Mark SOLD (single atomic Firestore batch commit)
   const handleMarkSold = async () => {
     if (!currentPlayer || !auctionState) return;
     setActionError(null);
 
     if (auctionState.status === 'paused') {
-      setActionError('Auction is currently PAUSED! Please RESUME the auction first before marking player as SOLD.');
+      setActionError('Auction is paused. Resume before marking player SOLD.');
       return;
     }
 
-    if (!selectedTeamId) {
-      setActionError('Please select the winning team before marking player as SOLD.');
+    const winningId = selectedTeamId || latestBidRef.current.teamId;
+    if (!winningId) {
+      setActionError('Select a bidding team before marking player as SOLD.');
       return;
     }
 
-    const winningTeam = teams.find((t) => t.id === selectedTeamId);
+    const winningTeam = teams.find((t) => t.id === winningId);
     if (!winningTeam) {
       setActionError('Invalid winning team selected.');
       return;
     }
 
-    if (bidPoints > winningTeam.remainingPurse) {
+    const finalPoints = bidPoints || latestBidRef.current.points;
+    if (finalPoints > winningTeam.remainingPurse) {
       setActionError(
-        `Cannot sell! Bid of ${bidPoints} PTS exceeds ${winningTeam.name}'s remaining purse of ${winningTeam.remainingPurse} PTS.`
+        `Bid of ₹ ${finalPoints} PTS exceeds ${winningTeam.name}'s remaining purse (₹ ${winningTeam.remainingPurse} PTS).`
       );
       return;
     }
@@ -342,48 +405,49 @@ export function AdminLiveAuctionControl({
     setSubmitting(true);
     try {
       const now = new Date().toISOString();
-      const newRemainingPurse = winningTeam.remainingPurse - bidPoints;
-      const newTotalSpent = (winningTeam.totalSpent || 0) + bidPoints;
+      const newRemainingPurse = winningTeam.remainingPurse - finalPoints;
+      const newTotalSpent = (winningTeam.totalSpent || 0) + finalPoints;
       const newCount = (winningTeam.purchasedPlayerCount || 0) + 1;
 
-      // 1. Update Team Doc
-      await updateDoc(doc(db, 'teams', winningTeam.id), {
+      const batch = writeBatch(db);
+
+      batch.update(doc(db, 'teams', winningTeam.id), {
         remainingPurse: newRemainingPurse,
         totalSpent: newTotalSpent,
         purchasedPlayerCount: newCount,
         updatedAt: now
       });
 
-      // 2. Update Player Doc
-      await updateDoc(doc(db, 'players', currentPlayer.id), {
+      batch.update(doc(db, 'players', currentPlayer.id), {
         status: 'sold',
-        soldPoints: bidPoints,
+        soldPoints: finalPoints,
         soldToTeamId: winningTeam.id,
         soldToTeamName: winningTeam.name,
         soldToTeamLogo: winningTeam.logoUrl,
         updatedAt: now
       });
 
-      // 3. Update AuctionState with SOLD broadcast
-      await updateDoc(doc(db, 'auctionState', auctionId), {
+      batch.update(doc(db, 'auctionState', auctionId), {
         playerStatus: 'sold',
-        currentBidPoints: bidPoints,
+        currentBidPoints: finalPoints,
         winningTeamId: winningTeam.id,
         winningTeamName: winningTeam.name,
         winningTeamLogo: winningTeam.logoUrl,
         winningTeamRemainingPurse: newRemainingPurse,
         lastSoldPlayerName: currentPlayer.name,
         lastSoldPlayerPhoto: currentPlayer.photoUrl,
-        lastSoldPoints: bidPoints,
+        lastSoldPoints: finalPoints,
         lastSoldTeamName: winningTeam.name,
         lastSoldTeamLogo: winningTeam.logoUrl,
         updatedAt: now
       });
 
+      await batch.commit();
+
       setShowCelebration(true);
-      setTimeout(() => setShowCelebration(false), 4000);
-      setActionSuccess(`Player ${currentPlayer.name} successfully SOLD to ${winningTeam.name} for ${bidPoints} PTS!`);
-      setTimeout(() => setActionSuccess(null), 4000);
+      if (celebrationTimerRef.current) window.clearTimeout(celebrationTimerRef.current);
+      celebrationTimerRef.current = window.setTimeout(() => setShowCelebration(false), 3800);
+      flashSuccess(`${currentPlayer.name} SOLD to ${winningTeam.name} for ₹ ${finalPoints} PTS.`);
     } catch (err) {
       setActionError(err instanceof Error ? err.message : 'Failed to mark player sold');
     } finally {
@@ -391,12 +455,12 @@ export function AdminLiveAuctionControl({
     }
   };
 
-  // Handle Mark UNSOLD
+  // Mark UNSOLD (single atomic batch commit)
   const handleMarkUnsold = async () => {
     if (!currentPlayer || !auctionState) return;
 
     if (auctionState.status === 'paused') {
-      setActionError('Auction is currently PAUSED! Please RESUME the auction first.');
+      setActionError('Auction is paused. Resume before marking player UNSOLD.');
       return;
     }
 
@@ -405,9 +469,9 @@ export function AdminLiveAuctionControl({
 
     try {
       const now = new Date().toISOString();
+      const batch = writeBatch(db);
 
-      // 1. Update Player Doc status to unsold
-      await updateDoc(doc(db, 'players', currentPlayer.id), {
+      batch.update(doc(db, 'players', currentPlayer.id), {
         status: 'unsold',
         soldPoints: 0,
         soldToTeamId: null,
@@ -415,8 +479,7 @@ export function AdminLiveAuctionControl({
         updatedAt: now
       });
 
-      // 2. Broadcast UNSOLD on state
-      await updateDoc(doc(db, 'auctionState', auctionId), {
+      batch.update(doc(db, 'auctionState', auctionId), {
         playerStatus: 'unsold',
         winningTeamId: null,
         winningTeamName: null,
@@ -428,8 +491,8 @@ export function AdminLiveAuctionControl({
         updatedAt: now
       });
 
-      setActionSuccess(`Player ${currentPlayer.name} marked as UNSOLD and added to the Unsold Pool.`);
-      setTimeout(() => setActionSuccess(null), 4000);
+      await batch.commit();
+      flashSuccess(`${currentPlayer.name} marked UNSOLD and moved to Unsold Pool.`);
     } catch (err) {
       setActionError(err instanceof Error ? err.message : 'Failed to mark player unsold');
     } finally {
@@ -437,10 +500,10 @@ export function AdminLiveAuctionControl({
     }
   };
 
-  // Next Player
+  // Advance to Next Player (single atomic batch commit)
   const handleNextPlayer = async () => {
     if (auctionState?.status === 'paused') {
-      setActionError('Auction is currently PAUSED! Please RESUME the auction first before advancing to next player.');
+      setActionError('Auction is paused. Resume before advancing to next player.');
       return;
     }
 
@@ -450,19 +513,18 @@ export function AdminLiveAuctionControl({
     try {
       const now = new Date().toISOString();
       const currentRound = auctionState?.round || 'regular';
+      const batch = writeBatch(db);
 
       if (currentRound === 'regular') {
-        // Find next upcoming player in regular roster
         const nextPlayer = players.find((p) => p.status === 'upcoming');
 
         if (nextPlayer) {
-          // Advance to next regular player
-          await updateDoc(doc(db, 'players', nextPlayer.id), {
+          batch.update(doc(db, 'players', nextPlayer.id), {
             status: 'current',
             updatedAt: now
           });
 
-          await updateDoc(doc(db, 'auctionState', auctionId), {
+          batch.update(doc(db, 'auctionState', auctionId), {
             currentPlayerId: nextPlayer.id,
             currentPlayerName: nextPlayer.name,
             currentPlayerRole: nextPlayer.role,
@@ -479,21 +541,21 @@ export function AdminLiveAuctionControl({
             updatedAt: now
           });
 
+          await batch.commit();
           setBidPoints(nextPlayer.basePoints);
           setSelectedTeamId('');
+          latestBidRef.current = { points: nextPlayer.basePoints, teamId: null };
         } else {
-          // Regular roster complete! Check if any unsold players exist
           const freshUnsold = players.filter((p) => p.status === 'unsold');
           if (freshUnsold.length > 0) {
-            // Trigger UNSOLD PLAYER ROUND
             const firstUnsold = freshUnsold[0];
-            await updateDoc(doc(db, 'players', firstUnsold.id), {
+            batch.update(doc(db, 'players', firstUnsold.id), {
               status: 'current',
               round: 'unsold',
               updatedAt: now
             });
 
-            await updateDoc(doc(db, 'auctionState', auctionId), {
+            batch.update(doc(db, 'auctionState', auctionId), {
               round: 'unsold',
               currentPlayerId: firstUnsold.id,
               currentPlayerName: firstUnsold.name,
@@ -511,34 +573,34 @@ export function AdminLiveAuctionControl({
               updatedAt: now
             });
 
-            await updateDoc(doc(db, 'auctions', auctionId), {
+            batch.update(doc(db, 'auctions', auctionId), {
               round: 'unsold',
               updatedAt: now
             });
 
+            await batch.commit();
             setBidPoints(firstUnsold.basePoints);
             setSelectedTeamId('');
-            setActionSuccess('Regular round complete! Commencing the UNSOLD PLAYER ROUND.');
+            latestBidRef.current = { points: firstUnsold.basePoints, teamId: null };
+            flashSuccess('Regular round complete. Starting Unsold Player Round.');
           } else {
-            // Auction Complete
             await handleFinishAuction();
           }
         }
       } else {
-        // In Unsold Round: pick next unsold player
         const remainingUnsold = players.filter(
           (p) => p.status === 'unsold' && p.id !== auctionState?.currentPlayerId
         );
 
         if (remainingUnsold.length > 0) {
           const nextUnsold = remainingUnsold[0];
-          await updateDoc(doc(db, 'players', nextUnsold.id), {
+          batch.update(doc(db, 'players', nextUnsold.id), {
             status: 'current',
             round: 'unsold',
             updatedAt: now
           });
 
-          await updateDoc(doc(db, 'auctionState', auctionId), {
+          batch.update(doc(db, 'auctionState', auctionId), {
             round: 'unsold',
             currentPlayerId: nextUnsold.id,
             currentPlayerName: nextUnsold.name,
@@ -556,11 +618,12 @@ export function AdminLiveAuctionControl({
             updatedAt: now
           });
 
+          await batch.commit();
           setBidPoints(nextUnsold.basePoints);
           setSelectedTeamId('');
+          latestBidRef.current = { points: nextUnsold.basePoints, teamId: null };
         } else {
-          // No more unsold players or round finished
-          setActionSuccess('All players in the unsold pool have been processed.');
+          flashSuccess('All players in the unsold pool have been processed.');
         }
       }
     } catch (err) {
@@ -570,37 +633,30 @@ export function AdminLiveAuctionControl({
     }
   };
 
-  // Pause / Resume
+  // Pause / Resume (atomic batch)
   const handleTogglePause = async () => {
     if (!auctionState) return;
     const newStatus = auctionState.status === 'live' ? 'paused' : 'live';
+    const now = new Date().toISOString();
     try {
-      await updateDoc(doc(db, 'auctionState', auctionId), {
-        status: newStatus,
-        updatedAt: new Date().toISOString()
-      });
-      await updateDoc(doc(db, 'auctions', auctionId), {
-        status: newStatus,
-        updatedAt: new Date().toISOString()
-      });
+      const batch = writeBatch(db);
+      batch.update(doc(db, 'auctionState', auctionId), { status: newStatus, updatedAt: now });
+      batch.update(doc(db, 'auctions', auctionId), { status: newStatus, updatedAt: now });
+      await batch.commit();
     } catch (err) {
       console.error('Pause toggle failed:', err);
     }
   };
 
-  // Finish Auction
+  // Finish Auction (atomic batch)
   const handleFinishAuction = async () => {
     try {
       const now = new Date().toISOString();
-      await updateDoc(doc(db, 'auctionState', auctionId), {
-        status: 'completed',
-        updatedAt: now
-      });
-      await updateDoc(doc(db, 'auctions', auctionId), {
-        status: 'completed',
-        updatedAt: now
-      });
-      setActionSuccess('Auction has been officially COMPLETED!');
+      const batch = writeBatch(db);
+      batch.update(doc(db, 'auctionState', auctionId), { status: 'completed', updatedAt: now });
+      batch.update(doc(db, 'auctions', auctionId), { status: 'completed', updatedAt: now });
+      await batch.commit();
+      flashSuccess('Auction has been officially completed.');
     } catch (err) {
       console.error('Finish auction failed:', err);
     }
@@ -615,8 +671,11 @@ export function AdminLiveAuctionControl({
   }
 
   const selectedWinningTeam = teams.find((t) => t.id === selectedTeamId);
-  const activeHoldingTeam = teams.find((t) => t.id === (auctionState?.winningTeamId || selectedTeamId));
-  const currentLiveBidPoints = auctionState?.currentBidPoints || bidPoints || currentPlayer?.basePoints || 50;
+  const activeHoldingTeam = teams.find(
+    (t) => t.id === (auctionState?.winningTeamId || selectedTeamId)
+  );
+  const currentLiveBidPoints =
+    auctionState?.currentBidPoints || bidPoints || currentPlayer?.basePoints || 50;
 
   return (
     <div className="min-h-screen bg-[#060c16] text-white p-4 sm:p-6 lg:p-8 selection:bg-[#f5d77f] selection:text-[#060c16]">
@@ -624,62 +683,56 @@ export function AdminLiveAuctionControl({
       <PlayerDecisionPopup auctionState={auctionState} teams={teams} />
 
       {/* TOP HEADER */}
-      <div className="max-w-7xl mx-auto flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-[#13243f]">
-        <div className="flex items-center gap-3">
+      <header className="max-w-7xl mx-auto flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-5 border-b border-[#162b4a]">
+        <div className="flex items-center gap-3 min-w-0">
           <button
             onClick={onBack}
-            className="p-2.5 rounded-2xl bg-[#0a1526] border border-[#13243f] hover:bg-[#0e1f38] text-[#c5d3e8] hover:text-white transition-colors cursor-pointer"
+            className="h-10 w-10 rounded-xl bg-[#0a1526] border border-[#162b4a] hover:border-[#f5d77f]/50 text-[#c5d3e8] hover:text-white flex items-center justify-center transition-colors cursor-pointer shrink-0"
+            aria-label="Back to Admin Dashboard"
           >
             <ChevronLeft className="w-5 h-5" />
           </button>
-          {/* Official ZPL Tournament Crest Logo */}
-          <div className="w-12 h-12 rounded-full bg-[#081220] border-2 border-[#f5d77f]/60 p-0.5 flex items-center justify-center shadow-lg ring-1 ring-[#f5d77f]/30 shrink-0 overflow-hidden">
+
+          <div className="w-11 h-11 rounded-full bg-[#0a1526] border border-[#f5d77f]/55 p-0.5 flex items-center justify-center shrink-0 overflow-hidden">
             <img
               src="/assets/aistudio/file_00000000661882118ee895643705c2c1_2d4830dd.png"
-              alt="ZPL Official Logo"
-              className="w-full h-full object-contain filter contrast-105"
+              alt="ZPL Official Crest"
+              className="w-full h-full object-contain"
             />
           </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="px-2.5 py-0.5 rounded-full bg-[#0a1526] text-[#f5d77f] border border-[#f5d77f]/30 text-xs font-black uppercase tracking-wider shadow-sm">
-                Admin Control Room
-              </span>
+
+          <div className="min-w-0">
+            <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-[#f5d77f]">
+              <span>Admin Control Desk</span>
               {auctionState?.round === 'unsold' && (
-                <span className="px-2.5 py-0.5 rounded-full bg-rose-600 text-white text-xs font-black uppercase tracking-wider animate-pulse shadow-sm">
-                  Unsold Player Round
-                </span>
+                <>
+                  <span aria-hidden="true">&middot;</span>
+                  <span className="text-rose-400">Unsold Round</span>
+                </>
               )}
             </div>
-            <h1 className="text-xl sm:text-2xl font-black text-white tracking-tight mt-1">
+            <h1 className="text-lg sm:text-2xl font-black text-white tracking-tight truncate">
               {auction?.name || 'Live Auction Control'}
             </h1>
           </div>
         </div>
 
-        {/* ACTION BUTTONS & PUBLIC VIEWER LINK */}
+        {/* ACTION BAR */}
         <div className="flex items-center gap-2 flex-wrap">
-          {/* REAL-TIME LIVE VIEWERS WATCHING BADGE */}
           <div
-            className="min-h-[44px] flex items-center gap-2 px-3.5 py-2 rounded-2xl bg-zinc-950 border border-emerald-500/50 text-white shadow-sm"
-            title="Real-time count of viewers currently watching the auction"
+            className="h-10 inline-flex items-center gap-2 px-3 rounded-xl bg-[#0a1526] border border-[#162b4a] text-xs font-bold text-white tabular-nums"
+            title="Real-time viewers watching live"
           >
-            <span className="relative flex h-2.5 w-2.5">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
-            </span>
             <Eye className="w-4 h-4 text-emerald-400" />
-            <span className="text-xs sm:text-sm font-black text-white">
-              {formatViewerCount(liveViewerCount)} <span className="font-bold text-zinc-400 hidden sm:inline">Watching Live</span>
-            </span>
+            <span>{formatViewerCount(liveViewerCount)}</span>
+            <span className="text-[#a1b3cb] hidden sm:inline">Live</span>
           </div>
 
           <button
             onClick={() => setShowPreAuctionPhotoManager(true)}
-            className="min-h-[44px] flex items-center gap-1.5 px-3.5 py-2 rounded-2xl bg-zinc-950 hover:bg-zinc-800 border border-amber-500/30 text-xs sm:text-sm font-bold text-amber-400 hover:text-amber-300 transition-colors shadow-sm active:scale-98 cursor-pointer"
-            title="Manage Pre-Auction Photos (Last Year Champions & Teams Logo)"
+            className="h-10 inline-flex items-center gap-1.5 px-3.5 rounded-xl bg-[#0a1526] hover:bg-[#10223d] border border-[#f5d77f]/35 text-xs font-bold text-[#f5d77f] transition-colors cursor-pointer whitespace-nowrap"
           >
-            <ImageIcon className="w-4 h-4 text-amber-400" />
+            <ImageIcon className="w-4 h-4" />
             <span>Photos ({auction?.preAuctionPhotos?.length || 0})</span>
           </button>
 
@@ -687,7 +740,7 @@ export function AdminLiveAuctionControl({
             href={`?auction=${auctionId}`}
             target="_blank"
             rel="noreferrer"
-            className="min-h-[44px] flex items-center gap-1.5 px-3.5 py-2 rounded-2xl bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-xs sm:text-sm font-black text-black transition-colors shadow-sm active:scale-98 cursor-pointer"
+            className="h-10 inline-flex items-center gap-1.5 px-3.5 rounded-xl bg-gradient-to-r from-[#fff4c2] via-[#f5d77f] to-[#e0bc50] hover:from-white hover:to-[#f5d77f] text-xs font-black text-[#060c16] transition-colors cursor-pointer whitespace-nowrap"
           >
             <ExternalLink className="w-4 h-4" />
             <span>Public Screen</span>
@@ -695,16 +748,16 @@ export function AdminLiveAuctionControl({
 
           <button
             onClick={onViewResults}
-            className="min-h-[44px] flex items-center gap-1.5 px-3.5 py-2 rounded-2xl bg-zinc-950 hover:bg-zinc-800 border border-zinc-800 text-xs sm:text-sm font-bold text-zinc-200 hover:text-white transition-colors shadow-sm active:scale-98 cursor-pointer"
+            className="h-10 inline-flex items-center gap-1.5 px-3.5 rounded-xl bg-[#0a1526] hover:bg-[#10223d] border border-[#162b4a] text-xs font-bold text-[#c5d3e8] hover:text-white transition-colors cursor-pointer whitespace-nowrap"
           >
-            <Shield className="w-4 h-4 mr-0.5 text-amber-400" />
+            <Shield className="w-4 h-4 text-[#f5d77f]" />
             <span>Results</span>
           </button>
 
           {auctionState?.status === 'live' && (
             <button
               onClick={handleTogglePause}
-              className="min-h-[44px] flex items-center gap-1.5 px-3.5 py-2 rounded-2xl bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-black font-black text-xs sm:text-sm transition-colors shadow-sm active:scale-98 cursor-pointer"
+              className="h-10 inline-flex items-center gap-1.5 px-3.5 rounded-xl bg-[#f5d77f]/15 hover:bg-[#f5d77f]/25 border border-[#f5d77f]/50 text-[#f5d77f] font-bold text-xs transition-colors cursor-pointer whitespace-nowrap"
             >
               <Pause className="w-4 h-4" />
               <span>Pause</span>
@@ -714,7 +767,7 @@ export function AdminLiveAuctionControl({
           {auctionState?.status === 'paused' && (
             <button
               onClick={handleTogglePause}
-              className="min-h-[44px] flex items-center gap-1.5 px-3.5 py-2 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs sm:text-sm transition-colors shadow-sm active:scale-98 cursor-pointer"
+              className="h-10 inline-flex items-center gap-1.5 px-3.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs transition-colors cursor-pointer whitespace-nowrap"
             >
               <Play className="w-4 h-4" />
               <span>Resume</span>
@@ -724,41 +777,43 @@ export function AdminLiveAuctionControl({
           {auctionState?.status !== 'completed' && (
             <button
               onClick={handleFinishAuction}
-              className="min-h-[44px] flex items-center gap-1.5 px-3.5 py-2 rounded-2xl bg-rose-950/80 hover:bg-rose-900 border border-rose-800 text-rose-200 font-black text-xs sm:text-sm transition-colors shadow-sm active:scale-98 cursor-pointer"
+              className="h-10 inline-flex items-center gap-1.5 px-3.5 rounded-xl bg-rose-950/70 hover:bg-rose-900 border border-rose-500/40 text-rose-200 font-bold text-xs transition-colors cursor-pointer whitespace-nowrap"
             >
               <StopCircle className="w-4 h-4" />
               <span>Finish</span>
             </button>
           )}
         </div>
-      </div>
+      </header>
 
       {/* FEEDBACK MESSAGES */}
-      <div className="max-w-7xl mx-auto my-4 space-y-2">
-        {actionError && (
-          <div className="p-4 rounded-2xl bg-rose-950/90 border border-rose-500 text-rose-100 text-sm flex items-start gap-3 shadow-lg">
-            <AlertCircle className="w-5 h-5 text-rose-400 shrink-0 mt-0.5" />
-            <span className="font-semibold">{actionError}</span>
-          </div>
-        )}
-        {actionSuccess && (
-          <div className="p-4 rounded-2xl bg-emerald-950/90 border border-emerald-500 text-emerald-100 text-sm flex items-start gap-3 shadow-lg">
-            <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0 mt-0.5" />
-            <span className="font-semibold">{actionSuccess}</span>
-          </div>
-        )}
-      </div>
+      {(actionError || actionSuccess) && (
+        <div className="max-w-7xl mx-auto my-4 space-y-2">
+          {actionError && (
+            <div className="p-3.5 rounded-2xl bg-rose-950/85 border border-rose-500/70 text-rose-100 text-sm flex items-center gap-3">
+              <AlertCircle className="w-5 h-5 text-rose-400 shrink-0" />
+              <span className="font-semibold">{actionError}</span>
+            </div>
+          )}
+          {actionSuccess && (
+            <div className="p-3.5 rounded-2xl bg-emerald-950/85 border border-emerald-500/70 text-emerald-100 text-sm flex items-center gap-3">
+              <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />
+              <span className="font-semibold">{actionSuccess}</span>
+            </div>
+          )}
+        </div>
+      )}
 
-      {/* MOBILE & TABLET PORTAL TAB SWITCHER (visible on mobile/tablet, hidden on desktop lg:) */}
-      <div className="max-w-7xl mx-auto lg:hidden mb-4">
-        <div className="grid grid-cols-3 p-1 rounded-2xl bg-zinc-950 border border-zinc-800 shadow-md">
+      {/* MOBILE TAB SWITCHER */}
+      <div className="max-w-7xl mx-auto lg:hidden mt-4 mb-4">
+        <div className="grid grid-cols-3 p-1 rounded-2xl bg-[#0a1526] border border-[#162b4a]">
           <button
             type="button"
             onClick={() => setMobileTab('desk')}
-            className={`min-h-[44px] py-2 px-2 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+            className={`min-h-[42px] py-2 px-2 rounded-xl text-xs font-black transition-colors flex items-center justify-center gap-1.5 cursor-pointer ${
               mobileTab === 'desk'
-                ? 'bg-amber-400 text-black shadow-md'
-                : 'text-zinc-400 hover:text-white'
+                ? 'bg-[#f5d77f] text-[#060c16]'
+                : 'text-[#a1b3cb] hover:text-white'
             }`}
           >
             <Gavel className="w-3.5 h-3.5 shrink-0" />
@@ -768,10 +823,10 @@ export function AdminLiveAuctionControl({
           <button
             type="button"
             onClick={() => setMobileTab('teams')}
-            className={`min-h-[44px] py-2 px-2 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+            className={`min-h-[42px] py-2 px-2 rounded-xl text-xs font-black transition-colors flex items-center justify-center gap-1.5 cursor-pointer ${
               mobileTab === 'teams'
-                ? 'bg-amber-400 text-black shadow-md'
-                : 'text-zinc-400 hover:text-white'
+                ? 'bg-[#f5d77f] text-[#060c16]'
+                : 'text-[#a1b3cb] hover:text-white'
             }`}
           >
             <Shield className="w-3.5 h-3.5 shrink-0" />
@@ -781,10 +836,10 @@ export function AdminLiveAuctionControl({
           <button
             type="button"
             onClick={() => setMobileTab('queue')}
-            className={`min-h-[44px] py-2 px-2 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+            className={`min-h-[42px] py-2 px-2 rounded-xl text-xs font-black transition-colors flex items-center justify-center gap-1.5 cursor-pointer ${
               mobileTab === 'queue'
-                ? 'bg-amber-400 text-black shadow-md'
-                : 'text-zinc-400 hover:text-white'
+                ? 'bg-[#f5d77f] text-[#060c16]'
+                : 'text-[#a1b3cb] hover:text-white'
             }`}
           >
             <Users className="w-3.5 h-3.5 shrink-0" />
@@ -794,573 +849,417 @@ export function AdminLiveAuctionControl({
       </div>
 
       {/* MAIN CONTROL DESK */}
-      <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8">
-        {/* LEFT COLUMN: ACTIVE PLAYER & BID CONTROLS */}
-        <div className={`lg:col-span-8 space-y-6 ${mobileTab === 'desk' ? 'block' : 'hidden lg:block'}`}>
-          {auctionState?.status === 'draft' || auctionState?.status === 'scheduled' || !auctionState?.currentPlayerId ? (
-            <div className="rounded-3xl bg-zinc-950 border border-zinc-800 p-8 sm:p-12 text-center space-y-6 shadow-2xl">
-              <Play className="w-16 h-16 text-amber-400 drop-shadow-[0_0_8px_rgba(245,158,11,0.5)] mx-auto animate-pulse" />
+      <div className="max-w-7xl mx-auto mt-6 grid grid-cols-1 lg:grid-cols-12 gap-6">
+        {/* LEFT COLUMN: ACTIVE PLAYER & LIVE BID CONTROLS */}
+        <div className={`lg:col-span-8 space-y-5 ${mobileTab === 'desk' ? 'block' : 'hidden lg:block'}`}>
+          {auctionState?.status === 'draft' ||
+          auctionState?.status === 'scheduled' ||
+          !auctionState?.currentPlayerId ? (
+            <div className="rounded-3xl bg-[#0a1526] border border-[#f5d77f]/25 p-8 sm:p-12 text-center space-y-6 shadow-xl">
+              <Play className="w-14 h-14 text-[#f5d77f] mx-auto" />
               <div className="space-y-2 max-w-md mx-auto">
                 <h2 className="text-2xl sm:text-3xl font-black text-white">
-                  Ready to Start Auction?
+                  Ready to Start Auction
                 </h2>
-                <p className="text-zinc-400 text-sm">
-                  Starting the auction will automatically present the first player to all connected public screens and projector displays in real time.
+                <p className="text-[#a1b3cb] text-sm">
+                  Starting presents the first player to all connected public screens and projector displays in real time.
                 </p>
               </div>
 
-              <div className="pt-2 space-y-3">
+              <div className="pt-2 space-y-4">
                 <button
                   onClick={handleStartAuction}
                   disabled={submitting}
-                  className="px-8 py-3.5 rounded-2xl bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-black text-base sm:text-lg font-black transition-all shadow-xl shadow-amber-500/20 disabled:opacity-50 inline-flex items-center gap-2 cursor-pointer active:scale-98"
+                  className="px-8 py-3.5 rounded-xl bg-gradient-to-r from-[#fff4c2] via-[#f5d77f] to-[#e0bc50] hover:from-white hover:to-[#f5d77f] text-[#060c16] text-base font-black transition-transform active:scale-[0.98] disabled:opacity-50 inline-flex items-center gap-2 cursor-pointer"
                 >
                   <Play className="w-5 h-5 fill-current" />
                   <span>Start Auction Now</span>
                 </button>
 
-                <div className="pt-3 border-t border-zinc-800 flex flex-col items-center justify-center gap-2">
+                <div className="pt-4 border-t border-[#162b4a] flex flex-col items-center gap-1.5">
                   <button
                     type="button"
                     onClick={() => setShowPreAuctionPhotoManager(true)}
-                    className="px-5 py-2.5 rounded-2xl bg-zinc-950 hover:bg-zinc-800 border border-amber-500/30 text-amber-400 hover:text-amber-300 font-bold text-xs sm:text-sm inline-flex items-center gap-2 shadow-md transition-all cursor-pointer"
+                    className="px-4 py-2 rounded-xl bg-[#060c16] hover:bg-[#10223d] border border-[#f5d77f]/35 text-[#f5d77f] font-bold text-xs inline-flex items-center gap-2 cursor-pointer"
                   >
-                    <ImageIcon className="w-4 h-4 mr-0.5 text-amber-400" />
-                    <span>Manage Champions & Team Logos ({auction?.preAuctionPhotos?.length || 0})</span>
+                    <ImageIcon className="w-4 h-4" />
+                    <span>Manage Pre-Auction Slides ({auction?.preAuctionPhotos?.length || 0})</span>
                   </button>
-                  <span className="text-[11px] text-zinc-400">
-                    Photos rotate continuously (5-6s each) on viewer screens until live bidding starts
-                  </span>
                 </div>
               </div>
             </div>
           ) : (
-            <div className="rounded-3xl bg-zinc-950 border border-zinc-800 p-5 sm:p-7 shadow-2xl space-y-6">
-              {/* CURRENT PLAYER HEADER & STATUS */}
-              <div className="flex items-center justify-between border-b border-zinc-800 pb-4">
-                <div className="flex items-center gap-2">
-                  <span className="text-xs uppercase font-bold tracking-wider text-zinc-400">
-                    Live On Screen
+            <div className="rounded-3xl bg-[#0a1526] border border-[#f5d77f]/25 p-5 sm:p-6 shadow-xl space-y-5">
+              {/* CURRENT PLAYER STATUS BAR */}
+              <div className="flex items-center justify-between border-b border-[#162b4a] pb-3.5 text-xs">
+                <div className="flex items-center gap-2.5">
+                  <span className="uppercase font-bold tracking-wider text-[#a1b3cb]">
+                    On Stage
                   </span>
                   <span
-                    className={`px-2.5 py-0.5 rounded-full text-xs font-black uppercase ${
+                    className={`px-2.5 py-0.5 rounded-md font-black uppercase ${
                       auctionState.playerStatus === 'sold'
-                        ? 'bg-emerald-500 text-black'
+                        ? 'bg-emerald-500 text-[#060c16]'
                         : auctionState.playerStatus === 'unsold'
                         ? 'bg-rose-600 text-white'
-                        : 'bg-amber-400 text-black'
+                        : 'bg-[#f5d77f] text-[#060c16]'
                     }`}
                   >
                     {auctionState.playerStatus}
                   </span>
                 </div>
 
-                <span className="text-xs text-zinc-400 font-semibold">
-                  Round: {auctionState.round === 'unsold' ? 'Unsold Round' : 'Regular'}
+                <span className="text-[#a1b3cb] font-semibold">
+                  {auctionState.round === 'unsold' ? 'Unsold Round' : 'Regular Round'}
                 </span>
               </div>
 
-              {/* LIVE SOLD / UNSOLD STATUS BANNER */}
+              {/* SOLD / UNSOLD CONFIRMATION STRIP */}
               {auctionState.playerStatus === 'sold' && (
-                <div className="p-4 rounded-2xl bg-emerald-950/90 border-2 border-emerald-400 text-center shadow-lg">
-                  <span className="text-xs font-black uppercase tracking-widest text-emerald-400 block mb-1">
-                    OFFICIAL STATUS: SOLD
-                  </span>
-                  <p className="text-lg sm:text-xl font-black text-white uppercase">
+                <div className="p-3.5 rounded-2xl bg-emerald-950/75 border border-emerald-500/60 text-center">
+                  <p className="text-sm sm:text-base font-black text-white uppercase">
                     {(currentPlayer?.name || auctionState.currentPlayerName)?.toUpperCase()} SOLD TO{' '}
-                    <span className="text-emerald-300 underline underline-offset-2">
+                    <span className="text-emerald-300">
                       {(auctionState.winningTeamName || 'Winning Team')?.toUpperCase()}
                     </span>{' '}
-                    FOR{' '}
-                    <span className="text-emerald-300">
-                      {auctionState.currentBidPoints} PTS
+                    &middot;{' '}
+                    <span className="text-[#f5d77f] tabular-nums">
+                      ₹ {auctionState.currentBidPoints} PTS
                     </span>
                   </p>
                 </div>
               )}
 
               {auctionState.playerStatus === 'unsold' && (
-                <div className="p-4 rounded-2xl bg-rose-950/90 border-2 border-rose-500 text-center shadow-lg">
-                  <span className="text-xs font-black uppercase tracking-widest text-rose-400 block mb-1">
-                    OFFICIAL STATUS: UNSOLD
-                  </span>
-                  <p className="text-lg sm:text-xl font-black text-white uppercase">
-                    {(currentPlayer?.name || auctionState.currentPlayerName)?.toUpperCase()} UNSOLD
+                <div className="p-3.5 rounded-2xl bg-rose-950/75 border border-rose-500/60 text-center">
+                  <p className="text-sm sm:text-base font-black text-white uppercase">
+                    {(currentPlayer?.name || auctionState.currentPlayerName)?.toUpperCase()} &middot; UNSOLD
                   </p>
                 </div>
               )}
 
-              {/* CURRENT PLAYER DETAILS ROW */}
+              {/* CURRENT PLAYER ROW */}
               {currentPlayer && (
-                <div className="flex flex-col sm:flex-row items-center gap-5 p-4 rounded-2xl bg-black border border-zinc-800">
+                <div className="flex flex-col sm:flex-row items-center gap-4 p-4 rounded-2xl bg-[#060c16] border border-[#162b4a]">
                   <img
                     src={currentPlayer.photoUrl}
                     alt={currentPlayer.name}
-                    className="w-24 h-24 sm:w-28 sm:h-28 rounded-2xl object-cover object-top border-2 border-amber-500/40 shadow-md bg-zinc-950 shrink-0"
+                    referrerPolicy="no-referrer"
+                    className="w-22 h-22 sm:w-24 sm:h-24 rounded-2xl object-cover object-top border-2 border-[#f5d77f]/50 bg-[#0a1526] shrink-0"
                   />
-                  <div className="flex-1 text-center sm:text-left space-y-1">
-                    <div className="flex items-center justify-center sm:justify-start gap-2 flex-wrap">
+                  <div className="flex-1 min-w-0 text-center sm:text-left space-y-1">
+                    <div className="text-xs font-bold uppercase tracking-wider text-[#f5d77f]">
+                      {currentPlayer.role}
                       {(currentPlayer.slotNumber || currentPlayer.slotName) && (
-                        <span className="inline-block px-2.5 py-0.5 rounded-full bg-amber-400/20 border border-amber-500/40 text-amber-300 font-black text-xs uppercase tracking-wide">
-                          Slot {currentPlayer.slotNumber || 1}{currentPlayer.slotName ? ` • ${currentPlayer.slotName}` : ''}
-                        </span>
+                        <>
+                          {' · '}Slot {currentPlayer.slotNumber || 1}
+                          {currentPlayer.slotName ? ` (${currentPlayer.slotName})` : ''}
+                        </>
                       )}
-                      <span className="inline-block px-2.5 py-0.5 rounded-full bg-zinc-900 border border-zinc-700 text-zinc-300 font-black text-xs uppercase tracking-wide">
-                        {currentPlayer.role}
-                      </span>
                     </div>
-                    <h3 className="text-2xl font-black text-white">
+                    <h2 className="text-xl sm:text-2xl font-black text-white truncate">
                       {currentPlayer.name}
-                    </h3>
-                    <div className="flex items-center justify-center sm:justify-start gap-4 text-sm text-zinc-300 pt-1">
-                      <span>
-                        Base Points:{' '}
-                        <strong className="text-amber-400 font-black">
-                          {currentPlayer.basePoints} PTS
-                        </strong>
-                      </span>
-                      <span>•</span>
-                      <span>
-                        Status:{' '}
-                        <strong
-                          className={
-                            currentPlayer.status === 'sold'
-                              ? 'text-emerald-400 font-black'
-                              : currentPlayer.status === 'unsold'
-                              ? 'text-rose-400 font-black'
-                              : 'text-amber-400 font-black'
-                          }
-                        >
-                          {currentPlayer.status.toUpperCase()}
-                        </strong>
-                      </span>
-                    </div>
+                    </h2>
+                    <p className="text-xs sm:text-sm text-[#c5d3e8] tabular-nums">
+                      Base Price:{' '}
+                      <strong className="text-[#f5d77f] font-black">
+                        ₹ {currentPlayer.basePoints} PTS
+                      </strong>
+                    </p>
                   </div>
                 </div>
               )}
 
-              {/* BIDDING CONTROL BOX */}
-              <div className="p-5 rounded-2xl bg-black border border-zinc-800 space-y-5">
-                <div className="flex items-center justify-between">
-                  <h4 className="text-sm font-black uppercase tracking-wider text-amber-400 flex items-center gap-2">
-                    <Coins className="w-4 h-4 text-amber-400" />
-                    Live Bid Controller
-                  </h4>
-                  {auctionState.status === 'paused' && (
-                    <span className="px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/50 text-[10px] font-black uppercase tracking-wider animate-pulse flex items-center gap-1">
-                      <Pause className="w-3 h-3 fill-current" />
-                      PAUSED
+              {/* PAUSED WARNING */}
+              {auctionState.status === 'paused' && (
+                <div className="p-4 rounded-2xl bg-[#f5d77f]/10 border border-[#f5d77f]/60 flex flex-col sm:flex-row items-center justify-between gap-3">
+                  <div className="text-center sm:text-left">
+                    <p className="text-sm font-black text-[#f5d77f] uppercase">Auction Paused</p>
+                    <p className="text-xs text-[#c5d3e8]">
+                      Resume the auction to continue placing live bids.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleTogglePause}
+                    className="h-10 px-5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-[#060c16] font-black text-xs uppercase tracking-wider inline-flex items-center gap-2 cursor-pointer shrink-0"
+                  >
+                    <Play className="w-4 h-4 fill-current" />
+                    <span>Resume Auction</span>
+                  </button>
+                </div>
+              )}
+
+              {/* LIVE HIGHEST BIDDER BANNER */}
+              <div
+                className={`p-4 sm:p-5 rounded-2xl bg-[#060c16] border-2 transition-colors ${
+                  activeHoldingTeam ? 'border-[#f5d77f]' : 'border-[#162b4a]'
+                }`}
+              >
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+                  <div className="flex items-center gap-3.5 w-full sm:w-auto min-w-0">
+                    {activeHoldingTeam ? (
+                      <>
+                        <img
+                          src={activeHoldingTeam.logoUrl}
+                          alt={activeHoldingTeam.name}
+                          referrerPolicy="no-referrer"
+                          className="w-13 h-13 rounded-2xl object-cover border-2 border-[#f5d77f] bg-[#0a1526] shrink-0"
+                        />
+                        <div className="min-w-0">
+                          <span className="text-[11px] font-black uppercase tracking-wider text-[#f5d77f] block">
+                            Highest Bidder
+                          </span>
+                          <h3 className="text-lg sm:text-2xl font-black text-white truncate">
+                            {activeHoldingTeam.name}
+                          </h3>
+                          <p className="text-xs text-[#a1b3cb] tabular-nums">
+                            Purse Left:{' '}
+                            <strong className="text-emerald-400">
+                              ₹ {activeHoldingTeam.remainingPurse}
+                            </strong>{' '}
+                            &middot; Squad: {activeHoldingTeam.purchasedPlayerCount || 0}
+                          </p>
+                        </div>
+                      </>
+                    ) : (
+                      <div className="flex items-center gap-3">
+                        <div className="w-12 h-12 rounded-2xl bg-[#0a1526] border border-[#162b4a] flex items-center justify-center text-[#f5d77f] shrink-0">
+                          <Coins className="w-6 h-6" />
+                        </div>
+                        <div>
+                          <span className="text-[11px] font-bold uppercase tracking-wider text-[#a1b3cb] block">
+                            Waiting for Opening Bid
+                          </span>
+                          <h3 className="text-base sm:text-lg font-black text-white">
+                            Tap any team below to place bid
+                          </h3>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="w-full sm:w-auto text-center sm:text-right shrink-0">
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-[#a1b3cb] block">
+                      {activeHoldingTeam ? 'Current Bid' : 'Base Price'}
                     </span>
-                  )}
+                    <div className="text-3xl sm:text-4xl font-black text-[#fff4c2] tracking-tight tabular-nums">
+                      ₹ {currentLiveBidPoints}{' '}
+                      <span className="text-sm font-bold text-[#f5d77f]">PTS</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* DIRECT 1-CLICK TEAM BIDDING GRID */}
+              <div className={auctionState.status === 'paused' ? 'opacity-50 pointer-events-none' : ''}>
+                <div className="flex items-center justify-between mb-3">
+                  <h4 className="text-xs font-black uppercase tracking-wider text-[#f5d77f] inline-flex items-center gap-1.5">
+                    <Zap className="w-4 h-4 fill-current" />
+                    <span>Direct Team Bid (+5 PTS)</span>
+                  </h4>
+                  <span className="text-[11px] text-[#a1b3cb]">Instant Real-Time Sync</span>
                 </div>
 
-                {/* AUCTION PAUSED ALERT BANNER WITH INSTANT RESUME BUTTON */}
-                {auctionState.status === 'paused' && (
-                  <div className="p-4 rounded-2xl bg-amber-500/15 border-2 border-amber-500/80 flex flex-col sm:flex-row items-center justify-between gap-3 text-center sm:text-left shadow-lg shadow-amber-500/10">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-2xl bg-amber-400 text-black flex items-center justify-center shrink-0 shadow-md">
-                        <Pause className="w-5 h-5 fill-current" />
-                      </div>
-                      <div>
-                        <div className="flex items-center gap-2 justify-center sm:justify-start">
-                          <span className="text-sm font-black text-amber-300 uppercase tracking-wide">
-                            Auction is Currently Paused
-                          </span>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {teams.map((t) => {
+                    const isLeading = t.id === auctionState.winningTeamId;
+                    const basePrice = currentPlayer?.basePoints || 50;
+                    const hasBidder = Boolean(auctionState.winningTeamId);
+                    const nextBidForTeam = hasBidder ? currentLiveBidPoints + 5 : basePrice + 5;
+                    const hasEnoughPurseForNext = t.remainingPurse >= nextBidForTeam;
+                    const hasEnoughPurseForBase = t.remainingPurse >= basePrice;
+                    const isPaused = auctionState.status === 'paused';
+
+                    return (
+                      <div
+                        key={t.id}
+                        className={`p-3.5 rounded-2xl border transition-colors flex flex-col justify-between gap-2.5 ${
+                          isLeading
+                            ? 'bg-[#0e1e36] border-2 border-[#f5d77f]'
+                            : hasEnoughPurseForNext
+                            ? 'bg-[#060c16] border-[#162b4a] hover:border-[#f5d77f]/50'
+                            : 'bg-[#060c16]/60 border-[#162b4a]/60 opacity-45'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between gap-2.5">
+                          <div className="flex items-center gap-2.5 min-w-0">
+                            <img
+                              src={t.logoUrl}
+                              alt={t.name}
+                              referrerPolicy="no-referrer"
+                              className={`w-9 h-9 rounded-full object-cover border bg-[#0a1526] shrink-0 ${
+                                isLeading ? 'border-[#f5d77f]' : 'border-[#224270]'
+                              }`}
+                            />
+                            <div className="min-w-0">
+                              <h5 className="text-sm font-black text-white truncate">{t.name}</h5>
+                              <p
+                                className={`text-[11px] font-bold tabular-nums ${
+                                  t.remainingPurse < nextBidForTeam
+                                    ? 'text-rose-400'
+                                    : 'text-emerald-400'
+                                }`}
+                              >
+                                Purse: ₹ {t.remainingPurse} PTS
+                              </p>
+                            </div>
+                          </div>
+
+                          {isLeading && (
+                            <span className="text-xs font-black text-[#f5d77f] tabular-nums shrink-0">
+                              ₹ {currentLiveBidPoints}
+                            </span>
+                          )}
                         </div>
-                        <p className="text-xs text-zinc-300 font-medium mt-0.5">
-                          Bids cannot be placed while the auction is paused. First click <strong>Resume Auction</strong>, then place the bid.
-                        </p>
+
+                        {!hasBidder ? (
+                          <div className="grid grid-cols-2 gap-2">
+                            <button
+                              type="button"
+                              disabled={isPaused || !hasEnoughPurseForBase}
+                              onClick={() => handleDirectTeamBid(t, basePrice)}
+                              className="min-h-[42px] px-3 py-2 rounded-xl bg-[#0a1526] hover:bg-[#10223d] active:scale-[0.98] disabled:opacity-40 border border-[#f5d77f]/40 text-[#f5d77f] font-black text-xs transition-transform cursor-pointer tabular-nums"
+                            >
+                              Base ₹ {basePrice}
+                            </button>
+
+                            <button
+                              type="button"
+                              disabled={isPaused || !hasEnoughPurseForNext}
+                              onClick={() => handleDirectTeamBid(t, nextBidForTeam)}
+                              className="min-h-[42px] px-3 py-2 rounded-xl bg-gradient-to-r from-[#fff4c2] via-[#f5d77f] to-[#e0bc50] hover:from-white hover:to-[#f5d77f] active:scale-[0.98] disabled:opacity-40 text-[#060c16] font-black text-xs transition-transform cursor-pointer tabular-nums"
+                            >
+                              +5 (₹ {nextBidForTeam})
+                            </button>
+                          </div>
+                        ) : (
+                          <button
+                            type="button"
+                            disabled={isPaused || !hasEnoughPurseForNext}
+                            onClick={() => handleDirectTeamBid(t, nextBidForTeam)}
+                            className={`w-full min-h-[44px] px-3.5 py-2 rounded-xl font-black text-xs sm:text-sm flex items-center justify-between transition-transform active:scale-[0.98] cursor-pointer ${
+                              !hasEnoughPurseForNext
+                                ? 'bg-rose-950/40 border border-rose-500/40 text-rose-300 cursor-not-allowed'
+                                : 'bg-gradient-to-r from-[#fff4c2] via-[#f5d77f] to-[#e0bc50] hover:from-white hover:to-[#f5d77f] text-[#060c16]'
+                            }`}
+                          >
+                            <span className="truncate">{t.name}</span>
+                            <span className="px-2 py-0.5 rounded-lg bg-[#060c16] text-[#f5d77f] text-xs font-black shrink-0 ml-2 tabular-nums">
+                              +5 &rarr; ₹ {nextBidForTeam}
+                            </span>
+                          </button>
+                        )}
                       </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* COLLAPSIBLE MANUAL BID ADJUSTER */}
+              <div className="pt-2 border-t border-[#162b4a]">
+                <button
+                  type="button"
+                  onClick={() => setShowManualAdjuster((v) => !v)}
+                  className="w-full py-2.5 px-3.5 rounded-xl bg-[#060c16] hover:bg-[#0d1c31] border border-[#162b4a] text-[#c5d3e8] hover:text-white text-xs font-bold flex items-center justify-between transition-colors cursor-pointer"
+                >
+                  <span className="inline-flex items-center gap-2">
+                    <SlidersHorizontal className="w-3.5 h-3.5 text-[#f5d77f]" />
+                    <span>Manual Bid Adjuster</span>
+                  </span>
+                  {showManualAdjuster ? (
+                    <ChevronUp className="w-4 h-4 text-[#a1b3cb]" />
+                  ) : (
+                    <ChevronDown className="w-4 h-4 text-[#a1b3cb]" />
+                  )}
+                </button>
+
+                {showManualAdjuster && (
+                  <div className="mt-3 p-4 rounded-2xl bg-[#060c16] border border-[#162b4a] space-y-4">
+                    <div className="flex items-center gap-2.5">
+                      <button
+                        type="button"
+                        disabled={auctionState.status === 'paused'}
+                        onClick={() =>
+                          handleUpdateBid(
+                            Math.max(currentPlayer?.basePoints || 5, bidPoints - 5),
+                            selectedTeamId
+                          )
+                        }
+                        className="h-12 w-12 rounded-xl bg-[#0a1526] hover:bg-[#10223d] border border-[#162b4a] font-black text-[#f5d77f] text-base cursor-pointer shrink-0"
+                      >
+                        -5
+                      </button>
+
+                      <input
+                        type="number"
+                        disabled={auctionState.status === 'paused'}
+                        value={bidPoints}
+                        onChange={(e) => handleUpdateBid(Number(e.target.value), selectedTeamId)}
+                        min={currentPlayer?.basePoints || 0}
+                        className="w-full h-12 px-4 rounded-xl bg-[#0a1526] border-2 border-[#f5d77f] text-[#fff4c2] font-black text-2xl text-center focus:outline-none tabular-nums"
+                      />
+
+                      <button
+                        type="button"
+                        disabled={auctionState.status === 'paused'}
+                        onClick={() => handleUpdateBid(bidPoints + 5, selectedTeamId)}
+                        className="h-12 w-12 rounded-xl bg-[#0a1526] hover:bg-[#10223d] border border-[#162b4a] font-black text-[#f5d77f] text-base cursor-pointer shrink-0"
+                      >
+                        +5
+                      </button>
+                    </div>
+
+                    <div className="grid grid-cols-4 sm:grid-cols-7 gap-2">
+                      {[-10, -5, 5, 10, 25, 50, 100].map((val) => (
+                        <button
+                          key={val}
+                          type="button"
+                          disabled={auctionState.status === 'paused'}
+                          onClick={() =>
+                            handleUpdateBid(
+                              Math.max(currentPlayer?.basePoints || 0, bidPoints + val),
+                              selectedTeamId
+                            )
+                          }
+                          className="h-10 rounded-xl bg-[#0a1526] hover:bg-[#f5d77f] hover:text-[#060c16] border border-[#162b4a] font-black text-xs text-[#c5d3e8] transition-colors cursor-pointer tabular-nums"
+                        >
+                          {val > 0 ? `+${val}` : val}
+                        </button>
+                      ))}
                     </div>
 
                     <button
                       type="button"
-                      onClick={handleTogglePause}
-                      className="min-h-[44px] px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-400 hover:from-emerald-400 hover:to-emerald-300 active:scale-95 text-black font-black text-xs sm:text-sm uppercase tracking-wider flex items-center gap-2 shadow-lg shadow-emerald-500/20 transition-all cursor-pointer shrink-0"
+                      disabled={!selectedTeamId}
+                      onClick={() => {
+                        if (!selectedTeamId) return;
+                        handleUpdateBid(bidPoints, selectedTeamId);
+                        flashSuccess(
+                          `Updated bid to ₹ ${bidPoints} PTS for ${selectedWinningTeam?.name || 'Team'}`
+                        );
+                      }}
+                      className="w-full h-11 rounded-xl bg-[#0e1f38] hover:bg-[#152e52] disabled:opacity-40 text-[#f5d77f] font-bold text-xs uppercase tracking-wider border border-[#f5d77f]/35 cursor-pointer"
                     >
-                      <Play className="w-4 h-4 fill-current" />
-                      <span>Resume Auction</span>
+                      {selectedWinningTeam
+                        ? `Sync ₹ ${bidPoints} PTS for ${selectedWinningTeam.name}`
+                        : 'Select a Team First'}
                     </button>
                   </div>
                 )}
-
-                {/* PROMINENT LIVE BID STATUS: TEAM NAME & BID POINT VISIBLE TOGETHER */}
-                <div className={`p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-zinc-950 via-zinc-900 to-zinc-950 border-2 ${activeHoldingTeam ? 'border-amber-400 shadow-amber-500/15 shadow-xl' : 'border-zinc-800'} transition-all`}>
-                  <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-                    {/* Left: Active Bidder Team Details */}
-                    <div className="flex items-center gap-3.5 w-full sm:w-auto">
-                      {activeHoldingTeam ? (
-                        <>
-                          <div className="relative shrink-0">
-                            <img
-                              src={activeHoldingTeam.logoUrl}
-                              alt={activeHoldingTeam.name}
-                              className="w-14 h-14 rounded-2xl object-cover border-2 border-amber-400 bg-black shadow-md"
-                            />
-                            <span className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-amber-400 text-black flex items-center justify-center text-[10px] font-black shadow">
-                              👑
-                            </span>
-                          </div>
-                          <div className="min-w-0">
-                            <div className="flex items-center gap-1.5 mb-0.5">
-                              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                              <span className="text-[10px] sm:text-xs font-black uppercase tracking-wider text-amber-400">
-                                Current Highest Bidder
-                              </span>
-                            </div>
-                            <h3 className="text-lg sm:text-2xl font-black text-white tracking-tight truncate max-w-[220px] sm:max-w-xs">
-                              {activeHoldingTeam.name}
-                            </h3>
-                            <p className="text-xs font-bold text-zinc-400 mt-0.5">
-                              Purse Left: <strong className="text-emerald-400 font-black">{activeHoldingTeam.remainingPurse} PTS</strong>
-                              <span className="mx-1.5">•</span>
-                              <span>Squad: <strong>{activeHoldingTeam.purchasedPlayerCount || 0}</strong></span>
-                            </p>
-                          </div>
-                        </>
-                      ) : (
-                        <div className="flex items-center gap-3">
-                          <div className="w-12 h-12 rounded-2xl bg-zinc-900 border border-zinc-700 flex items-center justify-center text-amber-400/70 font-black shrink-0">
-                            <Coins className="w-6 h-6" />
-                          </div>
-                          <div>
-                            <span className="text-[10px] sm:text-xs font-black uppercase tracking-wider text-zinc-400">
-                              Current Bidding Status
-                            </span>
-                            <h3 className="text-base sm:text-lg font-black text-zinc-200">
-                              No Bids Placed Yet
-                            </h3>
-                            <p className="text-xs text-zinc-400">
-                              Base: <strong className="text-amber-400">{currentPlayer?.basePoints || 50} PTS</strong>. Hit any team's <strong className="text-amber-400">+5 PTS</strong> button below!
-                            </p>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Right: Big Bold Bid Point Display */}
-                    <div className="w-full sm:w-auto text-center sm:text-right bg-black/60 sm:bg-transparent p-3 sm:p-0 rounded-2xl border border-zinc-800/80 sm:border-0">
-                      <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-zinc-400 block mb-0.5">
-                        {activeHoldingTeam ? 'Holding Bid Points' : 'Base Starting Price'}
-                      </span>
-                      <div className="text-3xl sm:text-4xl lg:text-5xl font-black text-amber-400 tracking-tight drop-shadow-md">
-                        ₹ {currentLiveBidPoints}{' '}
-                        <span className="text-xs sm:text-sm font-bold text-zinc-300 uppercase">
-                          PTS
-                        </span>
-                      </div>
-                      <span className="text-[11px] font-bold text-emerald-400 block mt-0.5">
-                        {activeHoldingTeam
-                          ? `Next +5 Hit: ₹ ${currentLiveBidPoints + 5} PTS`
-                          : `First +5 Hit: ₹ ${(currentPlayer?.basePoints || 50) + 5} PTS`}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* DIRECT TEAM BID BUTTONS: HIT TO BID +5 PTS WITH TEAM NAME & BID VISIBLE TOGETHER */}
-                <div className={auctionState.status === 'paused' ? 'opacity-60' : ''}>
-                  <div className="flex items-center justify-between mb-3">
-                    <div>
-                      <label className="text-xs font-black uppercase tracking-wider text-amber-400 flex items-center gap-1.5">
-                        <Zap className="w-4 h-4 text-amber-400 fill-current" />
-                        <span>Direct Team Bidding (+5 PTS Quick Hit):</span>
-                      </label>
-                      <span className="text-[11px] text-zinc-400 block mt-0.5">
-                        Hit any team's button to immediately register their bid, advance points by +5, and sync live.
-                      </span>
-                    </div>
-                    {auctionState.status === 'paused' && (
-                      <span className="text-[11px] font-bold text-amber-400 shrink-0">
-                        Paused
-                      </span>
-                    )}
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    {teams.map((t) => {
-                      const isLeading = t.id === auctionState.winningTeamId;
-                      const basePrice = currentPlayer?.basePoints || 50;
-                      const hasBidder = Boolean(auctionState.winningTeamId);
-                      
-                      // Next bid points for this team
-                      const nextBidForTeam = hasBidder
-                        ? currentLiveBidPoints + 5
-                        : basePrice + 5;
-                      
-                      const hasEnoughPurseForNext = t.remainingPurse >= nextBidForTeam;
-                      const hasEnoughPurseForBase = t.remainingPurse >= basePrice;
-                      const isPaused = auctionState.status === 'paused';
-
-                      return (
-                        <div
-                          key={t.id}
-                          className={`relative p-3.5 rounded-2xl border transition-all flex flex-col justify-between gap-3 ${
-                            isPaused
-                              ? 'bg-zinc-950/60 border-zinc-800/80 opacity-60'
-                              : isLeading
-                              ? 'bg-gradient-to-r from-amber-950/40 via-zinc-950 to-amber-950/40 border-2 border-amber-400 ring-2 ring-amber-400/40 shadow-lg shadow-amber-500/10'
-                              : hasEnoughPurseForNext
-                              ? 'bg-zinc-950 border-zinc-800 hover:border-amber-400/50 hover:bg-zinc-900/60'
-                              : 'bg-zinc-950/40 border-zinc-800/40 opacity-40'
-                          }`}
-                        >
-                          {/* Team Info Header */}
-                          <div className="flex items-center justify-between gap-2.5">
-                            <div className="flex items-center gap-2.5 min-w-0">
-                              <img
-                                src={t.logoUrl}
-                                alt={t.name}
-                                className={`w-9 h-9 rounded-full object-cover border bg-black shrink-0 ${
-                                  isLeading ? 'border-amber-400 ring-2 ring-amber-400/50' : 'border-zinc-700'
-                                }`}
-                              />
-                              <div className="min-w-0">
-                                <div className="flex items-center gap-1.5">
-                                  <h5 className="text-xs sm:text-sm font-black text-white truncate">
-                                    {t.name}
-                                  </h5>
-                                  {isLeading && (
-                                    <span className="px-1.5 py-0.5 rounded-md bg-amber-400 text-black text-[9px] font-black uppercase tracking-wider shrink-0">
-                                      Leader
-                                    </span>
-                                  )}
-                                </div>
-                                <p className={`text-[11px] font-bold ${
-                                  t.remainingPurse < nextBidForTeam ? 'text-rose-400' : 'text-emerald-400'
-                                }`}>
-                                  Purse: {t.remainingPurse} PTS
-                                </p>
-                              </div>
-                            </div>
-
-                            {/* Leading badge or quick bid point display */}
-                            {isLeading && (
-                              <div className="text-right shrink-0">
-                                <span className="text-[9px] uppercase font-bold text-amber-400 block">
-                                  Holds Bid
-                                </span>
-                                <span className="text-sm font-black text-amber-300">
-                                  ₹ {currentLiveBidPoints} PTS
-                                </span>
-                              </div>
-                            )}
-                          </div>
-
-                          {/* Action Buttons: Direct Hit +5 PTS Button (and Base Price if no bid placed yet) */}
-                          <div className="grid grid-cols-1 gap-2 pt-1">
-                            {!hasBidder ? (
-                              <div className="grid grid-cols-2 gap-2">
-                                <button
-                                  type="button"
-                                  disabled={isPaused || !hasEnoughPurseForBase}
-                                  onClick={() => handleDirectTeamBid(t, basePrice)}
-                                  className="min-h-[44px] px-3 py-2 rounded-xl bg-zinc-900 hover:bg-zinc-800 active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed border border-amber-500/40 text-amber-300 font-black text-xs flex items-center justify-center gap-1 transition-all shadow-sm cursor-pointer"
-                                  title={`Open at Base Price (${basePrice} PTS)`}
-                                >
-                                  <span>Base: ₹ {basePrice}</span>
-                                </button>
-
-                                <button
-                                  type="button"
-                                  disabled={isPaused || !hasEnoughPurseForNext}
-                                  onClick={() => handleDirectTeamBid(t, nextBidForTeam)}
-                                  className="min-h-[44px] px-3 py-2 rounded-xl bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed text-black font-black text-xs flex items-center justify-center gap-1.5 transition-all shadow-md shadow-amber-500/20 cursor-pointer"
-                                  title={`Hit to place +5 bid (${nextBidForTeam} PTS)`}
-                                >
-                                  <Zap className="w-3.5 h-3.5 fill-current shrink-0" />
-                                  <span>+5 PTS (₹ {nextBidForTeam})</span>
-                                </button>
-                              </div>
-                            ) : (
-                              <button
-                                type="button"
-                                disabled={isPaused || !hasEnoughPurseForNext}
-                                onClick={() => handleDirectTeamBid(t, nextBidForTeam)}
-                                className={`w-full min-h-[46px] px-4 py-2.5 rounded-xl font-black text-xs sm:text-sm flex items-center justify-between transition-all shadow-md active:scale-98 cursor-pointer ${
-                                  isPaused
-                                    ? 'bg-zinc-900 border border-zinc-800 text-zinc-500 cursor-not-allowed'
-                                    : !hasEnoughPurseForNext
-                                    ? 'bg-rose-950/40 border border-rose-800 text-rose-300 cursor-not-allowed opacity-60'
-                                    : isLeading
-                                    ? 'bg-gradient-to-r from-amber-400 via-amber-300 to-amber-400 text-black hover:from-amber-300 hover:to-amber-200 border-2 border-amber-300 shadow-amber-500/25'
-                                    : 'bg-gradient-to-r from-amber-400 to-amber-500 text-black hover:from-amber-300 hover:to-amber-400 border border-amber-400 shadow-amber-500/20'
-                                }`}
-                              >
-                                <span className="flex items-center gap-1.5 truncate">
-                                  <Zap className="w-4 h-4 fill-current shrink-0" />
-                                  <span className="truncate">{t.name}</span>
-                                </span>
-                                <span className="font-black px-2 py-0.5 rounded-lg bg-black text-amber-300 border border-amber-400/50 text-xs shrink-0 ml-2">
-                                  +5 PTS ➔ ₹ {nextBidForTeam}
-                                </span>
-                              </button>
-                            )}
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                {/* OPTIONAL / COLLAPSIBLE MANUAL ADJUSTER FOR CUSTOM OVERRIDES */}
-                <div className="pt-2 border-t border-zinc-800/80">
-                  <button
-                    type="button"
-                    onClick={() => setShowManualAdjuster(!showManualAdjuster)}
-                    className="w-full py-2 px-3 rounded-xl bg-zinc-950 hover:bg-zinc-900 border border-zinc-800 text-zinc-400 hover:text-zinc-200 text-xs font-bold flex items-center justify-between transition-colors cursor-pointer"
-                  >
-                    <span className="flex items-center gap-2">
-                      <SlidersHorizontal className="w-3.5 h-3.5 text-amber-400" />
-                      <span>Custom / Manual Bid Adjuster (Type Custom PTS, Steppers &amp; Quick Chips)</span>
-                    </span>
-                    {showManualAdjuster ? (
-                      <ChevronUp className="w-4 h-4 text-zinc-400" />
-                    ) : (
-                      <ChevronDown className="w-4 h-4 text-zinc-400" />
-                    )}
-                  </button>
-
-                  {showManualAdjuster && (
-                    <div className="mt-3 p-4 rounded-2xl bg-zinc-950 border border-zinc-800 space-y-4">
-                      {/* Large Input with Steppers */}
-                      <div className="flex items-center gap-2 sm:gap-3">
-                        <button
-                          type="button"
-                          disabled={auctionState.status === 'paused'}
-                          onClick={() => {
-                            if (auctionState.status === 'paused') {
-                              setActionError('Auction is currently PAUSED! Please click RESUME AUCTION first.');
-                              return;
-                            }
-                            handleUpdateBid(
-                              Math.max(
-                                currentPlayer?.basePoints || 5,
-                                bidPoints - 5
-                              ),
-                              selectedTeamId
-                            );
-                          }}
-                          className="min-h-[48px] min-w-[48px] sm:min-h-[52px] sm:min-w-[52px] rounded-2xl bg-zinc-900 hover:bg-zinc-800 active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed border border-zinc-700 font-black text-amber-400 text-lg flex items-center justify-center transition-all cursor-pointer shadow-md"
-                          title="Step down 5"
-                        >
-                          -5
-                        </button>
-
-                        <div className="relative flex-1">
-                          <input
-                            type="number"
-                            disabled={auctionState.status === 'paused'}
-                            value={bidPoints}
-                            onChange={(e) => {
-                              if (auctionState.status === 'paused') {
-                                setActionError('Auction is currently PAUSED! Please click RESUME AUCTION first.');
-                                return;
-                              }
-                              handleUpdateBid(Number(e.target.value), selectedTeamId);
-                            }}
-                            min={currentPlayer?.basePoints || 0}
-                            className="w-full min-h-[48px] sm:min-h-[52px] px-4 rounded-2xl bg-black border-2 border-amber-400 disabled:border-zinc-700 disabled:text-zinc-500 disabled:cursor-not-allowed text-amber-400 font-black text-2xl sm:text-3xl text-center focus:outline-none focus:ring-2 focus:ring-amber-400/30 shadow-inner"
-                          />
-                          <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs font-black text-zinc-500 pointer-events-none hidden sm:inline">
-                            PTS
-                          </span>
-                        </div>
-
-                        <button
-                          type="button"
-                          disabled={auctionState.status === 'paused'}
-                          onClick={() => {
-                            if (auctionState.status === 'paused') {
-                              setActionError('Auction is currently PAUSED! Please click RESUME AUCTION first.');
-                              return;
-                            }
-                            handleUpdateBid(bidPoints + 5, selectedTeamId);
-                          }}
-                          className="min-h-[48px] min-w-[48px] sm:min-h-[52px] sm:min-w-[52px] rounded-2xl bg-zinc-900 hover:bg-zinc-800 active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed border border-zinc-700 font-black text-amber-400 text-lg flex items-center justify-center transition-all cursor-pointer shadow-md"
-                          title="Step up 5"
-                        >
-                          +5
-                        </button>
-                      </div>
-
-                      {/* Fast Tap Increment Chips Bar */}
-                      <div>
-                        <span className="text-[11px] font-bold text-zinc-400 block mb-1.5 uppercase tracking-wide">
-                          Quick Tap Adjustments:
-                        </span>
-                        <div className="grid grid-cols-4 sm:grid-cols-7 gap-1.5 sm:gap-2">
-                          {[
-                            { label: '-10', val: -10 },
-                            { label: '-5', val: -5 },
-                            { label: '+5', val: 5 },
-                            { label: '+10', val: 10 },
-                            { label: '+25', val: 25 },
-                            { label: '+50', val: 50 },
-                            { label: '+100', val: 100 }
-                          ].map((item) => (
-                            <button
-                              key={item.label}
-                              type="button"
-                              disabled={auctionState.status === 'paused'}
-                              onClick={() => {
-                                if (auctionState.status === 'paused') {
-                                  setActionError('Auction is currently PAUSED! Please click RESUME AUCTION first.');
-                                  return;
-                                }
-                                handleUpdateBid(
-                                  Math.max(
-                                    currentPlayer?.basePoints || 0,
-                                    bidPoints + item.val
-                                  ),
-                                  selectedTeamId
-                                );
-                              }}
-                              className="min-h-[44px] rounded-xl bg-zinc-900 hover:bg-gradient-to-r hover:from-amber-400 hover:to-amber-500 hover:text-black active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed border border-zinc-700 font-black text-xs sm:text-sm text-zinc-200 transition-all shadow-sm flex items-center justify-center cursor-pointer"
-                            >
-                              {item.label}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-
-                      {/* Manual Submit Button */}
-                      <div>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            if (!selectedTeamId) {
-                              setActionError('Please select a team before manually applying this bid.');
-                              return;
-                            }
-                            handleUpdateBid(bidPoints, selectedTeamId);
-                            setActionSuccess(`Bid placed: ${bidPoints} PTS for ${selectedWinningTeam?.name || 'Selected Team'}`);
-                            setTimeout(() => setActionSuccess(null), 3000);
-                          }}
-                          disabled={!selectedTeamId}
-                          className="w-full min-h-[46px] py-2.5 px-4 rounded-xl bg-zinc-800 hover:bg-zinc-700 disabled:opacity-40 disabled:cursor-not-allowed text-amber-300 font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 border border-zinc-600 transition-all cursor-pointer active:scale-98"
-                        >
-                          <Coins className="w-4 h-4 text-amber-400" />
-                          <span>
-                            {selectedWinningTeam
-                              ? `Apply Manual Bid: ₹ ${bidPoints} PTS for ${selectedWinningTeam.name}`
-                              : 'Select Team to Apply Manual Bid'}
-                          </span>
-                        </button>
-                      </div>
-                    </div>
-                  )}
-                </div>
               </div>
 
-              {/* ACTION BUTTONS (MARK SOLD / MARK UNSOLD / NEXT PLAYER) */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
+              {/* PRIMARY DECISIONS: MARK SOLD / MARK UNSOLD / NEXT PLAYER */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
                 <button
                   type="button"
                   onClick={handleMarkSold}
-                  disabled={submitting || auctionState.status === 'paused' || auctionState.playerStatus === 'sold'}
-                  className="min-h-[52px] py-3.5 px-4 rounded-2xl bg-emerald-600 hover:bg-emerald-500 active:scale-[0.98] text-white font-black text-base flex items-center justify-center gap-2 shadow-lg shadow-emerald-950/60 transition-all disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
-                  title={auctionState.status === 'paused' ? 'Auction is paused. Resume to sell player.' : undefined}
+                  disabled={
+                    submitting ||
+                    auctionState.status === 'paused' ||
+                    auctionState.playerStatus === 'sold'
+                  }
+                  className="min-h-[52px] py-3 px-4 rounded-2xl bg-emerald-600 hover:bg-emerald-500 active:scale-[0.98] text-white font-black text-sm sm:text-base flex items-center justify-center gap-2 transition-all disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
                 >
                   <Check className="w-5 h-5 stroke-[3]" />
                   <span>MARK SOLD</span>
@@ -1369,9 +1268,12 @@ export function AdminLiveAuctionControl({
                 <button
                   type="button"
                   onClick={handleMarkUnsold}
-                  disabled={submitting || auctionState.status === 'paused' || auctionState.playerStatus === 'unsold'}
-                  className="min-h-[52px] py-3.5 px-4 rounded-2xl bg-rose-600 hover:bg-rose-500 active:scale-[0.98] text-white font-black text-base flex items-center justify-center gap-2 shadow-lg shadow-rose-950/60 transition-all disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
-                  title={auctionState.status === 'paused' ? 'Auction is paused. Resume first.' : undefined}
+                  disabled={
+                    submitting ||
+                    auctionState.status === 'paused' ||
+                    auctionState.playerStatus === 'unsold'
+                  }
+                  className="min-h-[52px] py-3 px-4 rounded-2xl bg-rose-600 hover:bg-rose-500 active:scale-[0.98] text-white font-black text-sm sm:text-base flex items-center justify-center gap-2 transition-all disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
                 >
                   <X className="w-5 h-5 stroke-[3]" />
                   <span>MARK UNSOLD</span>
@@ -1381,8 +1283,7 @@ export function AdminLiveAuctionControl({
                   type="button"
                   onClick={handleNextPlayer}
                   disabled={submitting || auctionState.status === 'paused'}
-                  className="min-h-[52px] py-3.5 px-4 rounded-2xl bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 active:scale-[0.98] text-black font-black text-base flex items-center justify-center gap-2 shadow-lg shadow-amber-500/20 transition-all disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
-                  title={auctionState.status === 'paused' ? 'Auction is paused. Resume first.' : undefined}
+                  className="min-h-[52px] py-3 px-4 rounded-2xl bg-gradient-to-r from-[#fff4c2] via-[#f5d77f] to-[#e0bc50] hover:from-white hover:to-[#f5d77f] active:scale-[0.98] text-[#060c16] font-black text-sm sm:text-base flex items-center justify-center gap-2 transition-all disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
                 >
                   <span>NEXT PLAYER</span>
                   <SkipForward className="w-5 h-5 fill-current" />
@@ -1392,49 +1293,60 @@ export function AdminLiveAuctionControl({
           )}
         </div>
 
-        {/* RIGHT COLUMN: TEAMS PURSE & UPCOMING / UNSOLD POOL */}
-        <div className={`lg:col-span-4 space-y-6 ${mobileTab !== 'desk' ? 'block' : 'hidden lg:block'}`}>
-          {/* TEAMS STATUS OVERVIEW */}
-          <div className="rounded-3xl bg-zinc-950 border border-zinc-800 p-5 shadow-xl space-y-3">
-            <div className="flex items-center justify-between pb-2 border-b border-zinc-800">
-              <h3 className="text-sm font-black uppercase tracking-wider text-amber-400 flex items-center gap-2">
-                <Shield className="w-4 h-4 mr-0.5 text-amber-400" />
-                Live Team Purses
+        {/* RIGHT COLUMN: LIVE PURSES & QUEUES */}
+        <div
+          className={`lg:col-span-4 space-y-5 ${
+            mobileTab !== 'desk' ? 'block' : 'hidden lg:block'
+          }`}
+        >
+          {/* TEAM PURSES */}
+          <div className="rounded-3xl bg-[#0a1526] border border-[#f5d77f]/25 p-5 shadow-xl space-y-3">
+            <div className="flex items-center justify-between pb-2.5 border-b border-[#162b4a]">
+              <h3 className="text-xs font-black uppercase tracking-wider text-[#f5d77f] inline-flex items-center gap-2">
+                <Shield className="w-4 h-4" />
+                <span>Team Purses</span>
               </h3>
-              <span className="text-xs text-zinc-400 font-bold">{teams.length} Teams</span>
+              <span className="text-xs text-[#a1b3cb] font-semibold tabular-nums">
+                {teams.length} Teams
+              </span>
             </div>
 
-            <div className="space-y-2.5 max-h-72 overflow-y-auto pr-1">
+            <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
               {teams.map((t) => (
                 <div
                   key={t.id}
-                  className={`flex items-center justify-between p-2.5 rounded-2xl border text-xs ${
+                  className={`flex items-center justify-between p-2.5 rounded-xl border text-xs ${
                     t.id === selectedTeamId
-                      ? 'bg-amber-400 text-black border-amber-400 font-bold'
-                      : 'bg-black border-zinc-800 text-white'
+                      ? 'bg-[#f5d77f] text-[#060c16] border-[#fff4c2] font-bold'
+                      : 'bg-[#060c16] border-[#162b4a] text-white'
                   }`}
                 >
-                  <div className="flex items-center gap-2 truncate">
+                  <div className="flex items-center gap-2.5 truncate">
                     <img
                       src={t.logoUrl}
                       alt={t.name}
-                      className="w-6 h-6 rounded-full object-cover border border-amber-500/30 bg-zinc-900 shrink-0"
+                      referrerPolicy="no-referrer"
+                      className="w-6 h-6 rounded-full object-cover border border-[#f5d77f]/35 bg-[#0a1526] shrink-0"
                     />
                     <span className="font-bold truncate">{t.name}</span>
                   </div>
-                  <div className="text-right shrink-0">
+                  <div className="text-right shrink-0 tabular-nums">
                     <span
                       className={`font-black ${
                         t.id === selectedTeamId
-                          ? 'text-black'
+                          ? 'text-[#060c16]'
                           : t.remainingPurse < 100
                           ? 'text-rose-400'
                           : 'text-emerald-400'
                       }`}
                     >
-                      {t.remainingPurse} PTS
+                      ₹ {t.remainingPurse}
                     </span>
-                    <span className={`block text-[10px] ${t.id === selectedTeamId ? 'text-black/80 font-bold' : 'text-zinc-400'}`}>
+                    <span
+                      className={`block text-[10px] ${
+                        t.id === selectedTeamId ? 'text-[#060c16]/75 font-bold' : 'text-[#a1b3cb]'
+                      }`}
+                    >
                       {t.purchasedPlayerCount || 0} players
                     </span>
                   </div>
@@ -1444,47 +1356,37 @@ export function AdminLiveAuctionControl({
           </div>
 
           {/* UNSOLD POOL */}
-          <div className="rounded-3xl bg-zinc-950 border border-zinc-800 p-5 shadow-xl space-y-3">
-            <div className="flex items-center justify-between pb-2 border-b border-zinc-800">
-              <h3 className="text-sm font-black uppercase tracking-wider text-rose-400 flex items-center gap-2">
-                <Users className="w-4 h-4 text-rose-400" />
-                Unsold Players ({unsoldPlayers.length})
+          <div className="rounded-3xl bg-[#0a1526] border border-[#162b4a] p-5 shadow-xl space-y-3">
+            <div className="flex items-center justify-between pb-2.5 border-b border-[#162b4a]">
+              <h3 className="text-xs font-black uppercase tracking-wider text-rose-400 inline-flex items-center gap-2">
+                <Users className="w-4 h-4" />
+                <span>Unsold Pool ({unsoldPlayers.length})</span>
               </h3>
-              {unsoldPlayers.length > 0 && auctionState?.round !== 'unsold' && (
-                <span className="text-[10px] text-amber-400 font-bold">
-                  Will repeat in Unsold Round
-                </span>
-              )}
             </div>
 
             {unsoldPlayers.length === 0 ? (
-              <p className="text-xs text-zinc-500 py-3 text-center">
-                No unsold players yet.
-              </p>
+              <p className="text-xs text-[#a1b3cb] py-3 text-center">No unsold players yet.</p>
             ) : (
-              <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
+              <div className="space-y-2 max-h-44 overflow-y-auto pr-1">
                 {unsoldPlayers.map((p) => (
                   <div
                     key={p.id}
-                    className="flex items-center justify-between p-2 rounded-xl bg-black border border-rose-900/40 text-xs"
+                    className="flex items-center justify-between p-2 rounded-xl bg-[#060c16] border border-rose-500/25 text-xs"
                   >
-                    <div className="flex items-center gap-2 min-w-0">
+                    <div className="flex items-center gap-2.5 min-w-0">
                       <img
                         src={p.photoUrl}
                         alt={p.name}
+                        referrerPolicy="no-referrer"
                         className="w-7 h-7 rounded-lg object-cover object-top border border-rose-500/40 shrink-0"
                       />
                       <div className="min-w-0">
-                        <span className="font-bold text-white truncate block">
-                          {p.name}
-                        </span>
-                        <span className="text-[10px] text-zinc-400">
-                          {p.role}
-                        </span>
+                        <span className="font-bold text-white truncate block">{p.name}</span>
+                        <span className="text-[10px] text-[#a1b3cb]">{p.role}</span>
                       </div>
                     </div>
-                    <span className="text-rose-400 font-black shrink-0">
-                      {p.basePoints} PTS
+                    <span className="text-rose-400 font-black shrink-0 tabular-nums">
+                      ₹ {p.basePoints}
                     </span>
                   </div>
                 ))}
@@ -1493,41 +1395,38 @@ export function AdminLiveAuctionControl({
           </div>
 
           {/* UPCOMING QUEUE */}
-          <div className="rounded-2xl bg-zinc-950 border border-zinc-800 p-5 shadow-xl space-y-3">
-            <div className="flex items-center justify-between pb-2 border-b border-zinc-800">
-              <h3 className="text-sm font-black uppercase tracking-wider text-white">
-                Upcoming Queue ({upcomingPlayers.length})
+          <div className="rounded-3xl bg-[#0a1526] border border-[#162b4a] p-5 shadow-xl space-y-3">
+            <div className="flex items-center justify-between pb-2.5 border-b border-[#162b4a]">
+              <h3 className="text-xs font-black uppercase tracking-wider text-white">
+                Up Next ({upcomingPlayers.length})
               </h3>
             </div>
 
             {upcomingPlayers.length === 0 ? (
-              <p className="text-xs text-zinc-500 py-3 text-center">
-                Queue empty! All original players presented.
+              <p className="text-xs text-[#a1b3cb] py-3 text-center">
+                All regular roster players presented.
               </p>
             ) : (
               <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
-                {upcomingPlayers.slice(0, 5).map((p) => (
+                {upcomingPlayers.slice(0, 6).map((p) => (
                   <div
                     key={p.id}
-                    className="flex items-center justify-between p-2 rounded-xl bg-black border border-zinc-800 text-xs"
+                    className="flex items-center justify-between p-2 rounded-xl bg-[#060c16] border border-[#162b4a] text-xs"
                   >
-                    <div className="flex items-center gap-2 min-w-0">
+                    <div className="flex items-center gap-2.5 min-w-0">
                       <img
                         src={p.photoUrl}
                         alt={p.name}
-                        className="w-7 h-7 rounded-lg object-cover object-top border border-zinc-700 shrink-0"
+                        referrerPolicy="no-referrer"
+                        className="w-7 h-7 rounded-lg object-cover object-top border border-[#224270] shrink-0"
                       />
                       <div className="min-w-0">
-                        <span className="font-bold text-white truncate block">
-                          {p.name}
-                        </span>
-                        <span className="text-[10px] text-zinc-400">
-                          {p.role}
-                        </span>
+                        <span className="font-bold text-white truncate block">{p.name}</span>
+                        <span className="text-[10px] text-[#a1b3cb]">{p.role}</span>
                       </div>
                     </div>
-                    <span className="text-amber-400 font-bold shrink-0">
-                      Base: {p.basePoints} PTS
+                    <span className="text-[#f5d77f] font-bold shrink-0 tabular-nums">
+                      ₹ {p.basePoints}
                     </span>
                   </div>
                 ))}
@@ -1537,7 +1436,7 @@ export function AdminLiveAuctionControl({
         </div>
       </div>
 
-      {/* PRE-AUCTION SLIDESHOW PHOTOS MODAL (LIGHT ORANGE & WHITE) */}
+      {/* PRE-AUCTION SLIDESHOW PHOTOS MODAL */}
       {auction && (
         <AdminPreAuctionPhotoManager
           auction={auction}

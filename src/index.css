@@ -95,6 +95,15 @@ body {
   }
 }
 
+@keyframes decisionCountdown {
+  from {
+    transform: scaleX(1);
+  }
+  to {
+    transform: scaleX(0);
+  }
+}
+
 .animate-float-card {
   animation: floatCard 6s ease-in-out infinite;
 }
@@ -109,6 +118,21 @@ body {
 
 .animate-pulse-unsold {
   animation: pulseUnsold 1.5s ease-in-out infinite;
+}
+
+.animate-decision-countdown {
+  transform-origin: left center;
+  animation: decisionCountdown 7s linear forwards;
+  will-change: transform;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-float-card,
+  .animate-pulse-gold,
+  .animate-pulse-sold,
+  .animate-pulse-unsold {
+    animation: none;
+  }
 }
 
 /* Custom Scrollbar - Midnight Navy & Light Gold */
