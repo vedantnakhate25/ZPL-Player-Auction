@@ -80,12 +80,14 @@ export function LiveAuctionViewer({
 
   // Summary counts (memoized for smooth rendering)
   const totalPlayers = players.length;
-  const { soldCount } = useMemo(() => {
+  const { soldCount, unsoldCount } = useMemo(() => {
     let sold = 0;
+    let unsold = 0;
     for (let i = 0; i < players.length; i++) {
       if (players[i]?.status === 'sold') sold++;
+      else if (players[i]?.status === 'unsold') unsold++;
     }
-    return { soldCount: sold };
+    return { soldCount: sold, unsoldCount: unsold };
   }, [players]);
 
   const playSoundEffect = useCallback((type: 'sold' | 'unsold' | 'bid') => {
@@ -483,18 +485,18 @@ export function LiveAuctionViewer({
         {/* Right: Live Status, Viewer Count & Desktop Controls */}
         <div className="flex items-center justify-between md:justify-end gap-3 shrink-0">
           <div className="flex items-center gap-3 text-xs">
-            {auctionState?.status === 'live' ? (
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-red-600 text-white font-black tracking-wider uppercase whitespace-nowrap">
-                <span className="w-2 h-2 rounded-full bg-white" />
-                LIVE
+            {auctionState?.status === 'completed' || auction.status === 'completed' ? (
+              <span className="px-2.5 py-1 rounded-lg bg-[#0a1526] border border-[#162b4a] text-[#c5d3e8] font-bold tracking-wider uppercase whitespace-nowrap">
+                COMPLETED
               </span>
-            ) : auctionState?.status === 'paused' ? (
+            ) : auctionState?.status === 'paused' || auction.status === 'paused' ? (
               <span className="px-2.5 py-1 rounded-lg bg-[#f5d77f] text-[#060c16] font-black tracking-wider uppercase whitespace-nowrap">
                 PAUSED
               </span>
-            ) : auctionState?.status === 'completed' ? (
-              <span className="px-2.5 py-1 rounded-lg bg-[#0a1526] border border-[#162b4a] text-[#c5d3e8] font-bold tracking-wider uppercase whitespace-nowrap">
-                COMPLETED
+            ) : auctionState?.status === 'live' && auction.status === 'live' ? (
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-red-600 text-white font-black tracking-wider uppercase whitespace-nowrap">
+                <span className="w-2 h-2 rounded-full bg-white" />
+                LIVE
               </span>
             ) : (
               <span className="px-2.5 py-1 rounded-lg bg-[#0a1526] border border-[#f5d77f]/35 text-[#f5d77f] font-bold tracking-wider uppercase whitespace-nowrap">
@@ -589,7 +591,7 @@ export function LiveAuctionViewer({
           isProjectorMode ? 'overflow-y-auto md:overflow-hidden' : ''
         }`}
       >
-        {auctionState?.status === 'completed' ? (
+        {auctionState?.status === 'completed' || auction.status === 'completed' ? (
           <div
             className={`w-full text-center ${
               isProjectorMode
@@ -624,7 +626,14 @@ export function LiveAuctionViewer({
         ) : auctionState?.status === 'scheduled' ||
           auction.status === 'scheduled' ||
           auctionState?.status === 'draft' ||
-          (auctionState?.status !== 'live' && !auctionState?.currentPlayerId) ? (
+          auction.status === 'draft' ||
+          ((auctionState?.status === 'paused' || auction.status === 'paused') && !auctionState?.currentPlayerId) ||
+          ((auctionState?.status !== 'live' || auction.status !== 'live') && !auctionState?.currentPlayerId) ||
+          (!auctionState?.currentPlayerId &&
+            soldCount === 0 &&
+            unsoldCount === 0 &&
+            !auctionState?.lastSoldPlayerName &&
+            !auctionState?.lastUnsoldPlayerName) ? (
           isProjectorMode ? (
             <div className="w-full h-full flex-1 min-h-0 flex flex-col justify-center overflow-hidden">
               {projectorPreView === 'slideshow' ? (
@@ -645,13 +654,13 @@ export function LiveAuctionViewer({
           )
         ) : !auctionState?.currentPlayerId ? (
           isProjectorMode ? (
-            <div className="w-full h-full flex-1 min-h-0 flex flex-col justify-between overflow-hidden">
-              <div className="shrink-0 mb-1.5 py-1 px-4 rounded-xl bg-[#0a1526] border border-[#f5d77f]/35 flex items-center justify-center gap-2 text-xs text-[#f5d77f] font-bold max-w-sm mx-auto">
+            <div className="w-full h-full flex-1 min-h-0 flex flex-col justify-between gap-3 overflow-y-auto md:overflow-hidden">
+              <div className="shrink-0 py-2 px-4 rounded-xl bg-[#0a1526] border border-[#f5d77f]/35 flex items-center justify-center gap-2 text-xs text-[#f5d77f] font-bold max-w-sm mx-auto">
                 <Radio className="w-3.5 h-3.5" />
                 <span>Waiting for Next Player</span>
               </div>
-              <div className="w-full flex-1 min-h-0">
-                <PreAuctionSlideshow auction={auction} teams={teams} isProjectorMode={true} />
+              <div className="w-full flex-1 min-h-0 rounded-3xl bg-[#0a1526] border border-[#f5d77f]/25 p-4 sm:p-5 overflow-y-auto">
+                <TeamPurseBoard teams={teams} players={players} isProjectorMode={true} />
               </div>
             </div>
           ) : (
@@ -663,7 +672,6 @@ export function LiveAuctionViewer({
                   The auction is live. The next player will appear on stage momentarily.
                 </p>
               </div>
-              <PreAuctionSlideshow auction={auction} teams={teams} isProjectorMode={false} />
               <div className="rounded-3xl bg-[#0a1526] border border-[#f5d77f]/25 p-4 sm:p-6 shadow-xl">
                 <TeamPurseBoard teams={teams} players={players} isProjectorMode={false} />
               </div>

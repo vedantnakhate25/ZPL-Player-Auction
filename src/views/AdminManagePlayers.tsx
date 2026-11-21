@@ -59,7 +59,7 @@ export function AdminManagePlayers({
 
   // Form states
   const [slotNumber, setSlotNumber] = useState<number | ''>(1);
-  const [slotName, setSlotName] = useState<string>('Marquee Players');
+  const [slotName, setSlotName] = useState<string>('');
   const [name, setName] = useState('');
   const [role, setRole] = useState<PlayerRole>('Batsman');
   const [photoUrl, setPhotoUrl] = useState(PRESET_PLAYER_PHOTOS[0]);
@@ -111,13 +111,15 @@ export function AdminManagePlayers({
 
   const handleOpenAdd = () => {
     setEditingPlayer(null);
-    const highestSlot = players.reduce((max, p) => Math.max(max, p.slotNumber || 1), 1);
-    const matchingSlotPlayers = players.filter((p) => (p.slotNumber || 1) === highestSlot);
-    setSlotNumber(highestSlot);
-    const existingSlotName =
-      matchingSlotPlayers.find((p) => p.slotName)?.slotName ||
-      (highestSlot === 1 ? 'Marquee Players' : `Slot ${highestSlot}`);
-    setSlotName(existingSlotName);
+    if (players.length > 0) {
+      const highestSlot = players.reduce((max, p) => Math.max(max, p.slotNumber || 1), 1);
+      const matchingSlotPlayers = players.filter((p) => (p.slotNumber || 1) === highestSlot);
+      setSlotNumber(highestSlot);
+      setSlotName(matchingSlotPlayers.find((p) => p.slotName)?.slotName || '');
+    } else {
+      setSlotNumber(1);
+      setSlotName('');
+    }
 
     setName('');
     setRole('Batsman');
@@ -134,7 +136,7 @@ export function AdminManagePlayers({
   const handleOpenEdit = (player: Player) => {
     setEditingPlayer(player);
     setSlotNumber(player.slotNumber || 1);
-    setSlotName(player.slotName || 'Marquee Players');
+    setSlotName(player.slotName || '');
     setName(player.name);
     setRole(player.role);
     setPhotoUrl(player.photoUrl);
@@ -181,12 +183,17 @@ export function AdminManagePlayers({
       return;
     }
 
+    if (!slotName.trim()) {
+      setError('Please enter a slot name.');
+      return;
+    }
+
     const now = new Date().toISOString();
     const cleanName = name.trim();
     const finalPhoto = photoUrl || PRESET_PLAYER_PHOTOS[0];
     const pointsNum = Number(basePoints);
     const cleanSlotNum = slotNumber ? Number(slotNumber) : 1;
-    const cleanSlotName = slotName.trim() || `Slot ${cleanSlotNum}`;
+    const cleanSlotName = slotName.trim();
 
     if (editingPlayer) {
       const updatedPlayer: Player = {
@@ -263,6 +270,18 @@ export function AdminManagePlayers({
     new Set(players.map((p) => p.slotNumber || 1))
   ).sort((a, b) => a - b);
 
+  // Admin-defined slots already created in this auction (no inbuilt presets)
+  const adminCreatedSlots = Array.from(
+    players.reduce((map, p) => {
+      const num = p.slotNumber || 1;
+      const label = (p.slotName || '').trim();
+      if (label && !map.has(`${num}_${label.toLowerCase()}`)) {
+        map.set(`${num}_${label.toLowerCase()}`, { slot: num, name: label });
+      }
+      return map;
+    }, new Map<string, { slot: number; name: string }>()).values()
+  ).sort((a, b) => a.slot - b.slot);
+
   const filteredPlayers = players.filter((p) => {
     const matchRole = roleFilter === 'all' || p.role === roleFilter;
     const matchSlot = slotFilter === 'all' || String(p.slotNumber || 1) === slotFilter;
@@ -311,7 +330,7 @@ export function AdminManagePlayers({
                   const samplePlayer = players.find((p) => (p.slotNumber || 1) === s);
                   return (
                     <option key={s} value={String(s)} className="bg-[#0a1526] text-white">
-                      Slot {s}{samplePlayer?.slotName ? `: ${samplePlayer.slotName}` : ''}
+                      {samplePlayer?.slotName ? `${s}. ${samplePlayer.slotName}` : `Slot ${s}`}
                     </option>
                   );
                 })}
@@ -379,8 +398,8 @@ export function AdminManagePlayers({
                   />
                   
                   {/* Slot Tag on top left */}
-                  <div className="absolute top-2 left-2 px-2 py-0.5 rounded-lg bg-amber-400/90 text-black text-[10px] font-black uppercase tracking-wider shadow-sm backdrop-blur-xs">
-                    Slot {p.slotNumber || 1}
+                  <div className="absolute top-2 left-2 max-w-[60%] truncate px-2.5 py-0.5 rounded-lg bg-[#f5d77f] text-[#060c16] text-[10px] font-black uppercase tracking-wider shadow-sm">
+                    {p.slotName || `Slot ${p.slotNumber || 1}`}
                   </div>
 
                   <div className="absolute top-2 right-2 px-2.5 py-1 rounded-xl bg-black/90 backdrop-blur-md text-[11px] font-black tracking-wide text-amber-300 border border-zinc-700">
@@ -453,15 +472,15 @@ export function AdminManagePlayers({
 
         {/* ADD / EDIT MODAL */}
         {showAddModal && (
-          <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-            <div className="w-full max-w-lg rounded-3xl bg-zinc-950 border border-zinc-800 p-6 sm:p-8 shadow-2xl space-y-6 max-h-[90vh] overflow-y-auto">
-              <div className="flex items-center justify-between pb-3 border-b border-zinc-800">
+          <div className="fixed inset-0 z-50 bg-[#040811]/90 flex items-center justify-center p-4">
+            <div className="w-full max-w-lg rounded-3xl bg-[#0a1526] border border-[#f5d77f]/35 p-6 sm:p-8 shadow-2xl space-y-6 max-h-[90vh] overflow-y-auto">
+              <div className="flex items-center justify-between pb-3 border-b border-[#162b4a]">
                 <h3 className="text-xl font-black text-white">
                   {editingPlayer ? 'Edit Player' : 'Add New Player'}
                 </h3>
                 <button
                   onClick={() => setShowAddModal(false)}
-                  className="p-2 rounded-xl bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 text-zinc-400 hover:text-white cursor-pointer"
+                  className="p-2 rounded-xl bg-[#060c16] hover:bg-[#10223d] border border-[#162b4a] text-[#a1b3cb] hover:text-white cursor-pointer"
                 >
                   <X className="w-5 h-5" />
                 </button>
@@ -475,26 +494,26 @@ export function AdminManagePlayers({
               )}
 
               <form onSubmit={handleSubmit} className="space-y-4">
-                {/* 1. FIRST OPTION: AUCTION SLOT & SLOT NAME */}
-                <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 space-y-3">
+                {/* 1. FIRST OPTION: AUCTION SLOT & ADMIN-DEFINED SLOT NAME */}
+                <div className="p-4 rounded-2xl bg-[#060c16] border border-[#f5d77f]/35 space-y-3">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <span className="w-5 h-5 rounded-full bg-amber-400 text-black font-black text-xs flex items-center justify-center">
+                      <span className="w-5 h-5 rounded-full bg-[#f5d77f] text-[#060c16] font-black text-xs flex items-center justify-center">
                         1
                       </span>
-                      <label className="text-xs font-black uppercase tracking-wider text-amber-300">
-                        Auction Slot &amp; Set Allocation
+                      <label className="text-xs font-black uppercase tracking-wider text-[#f5d77f]">
+                        Auction Slot Allocation
                       </label>
                     </div>
-                    <span className="text-[10px] font-bold text-amber-400/90 uppercase tracking-wider">
-                      Required First
+                    <span className="text-[10px] font-bold text-[#f5d77f]/85 uppercase tracking-wider">
+                      Admin Defined
                     </span>
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                     <div>
-                      <label className="block text-[11px] font-bold uppercase tracking-wider text-zinc-300 mb-1">
-                        Slot Number:
+                      <label className="block text-[11px] font-bold uppercase tracking-wider text-[#c5d3e8] mb-1">
+                        Slot Order:
                       </label>
                       <input
                         type="number"
@@ -503,58 +522,53 @@ export function AdminManagePlayers({
                         min={1}
                         placeholder="e.g. 1"
                         required
-                        className="w-full px-3.5 py-2.5 rounded-xl bg-black border border-zinc-700 text-white placeholder-zinc-500 focus:outline-none focus:border-amber-400 focus:ring-1 focus:ring-amber-400 text-sm font-black text-center"
+                        className="w-full px-3.5 py-2.5 rounded-xl bg-[#0a1526] border border-[#162b4a] text-white placeholder-[#60738e] focus:outline-none focus:border-[#f5d77f] focus:ring-1 focus:ring-[#f5d77f] text-sm font-black text-center"
                       />
                     </div>
 
                     <div className="sm:col-span-2">
-                      <label className="block text-[11px] font-bold uppercase tracking-wider text-zinc-300 mb-1">
-                        Slot Name / Category:
+                      <label className="block text-[11px] font-bold uppercase tracking-wider text-[#c5d3e8] mb-1">
+                        Slot Name:
                       </label>
                       <input
                         type="text"
                         value={slotName}
                         onChange={(e) => setSlotName(e.target.value)}
-                        placeholder="e.g. Marquee Players, Set 1 - Batsmen"
+                        placeholder="Enter slot name decided by admin"
                         required
-                        className="w-full px-3.5 py-2.5 rounded-xl bg-black border border-zinc-700 text-white placeholder-zinc-500 focus:outline-none focus:border-amber-400 focus:ring-1 focus:ring-amber-400 text-sm font-bold"
+                        className="w-full px-3.5 py-2.5 rounded-xl bg-[#0a1526] border border-[#162b4a] text-white placeholder-[#60738e] focus:outline-none focus:border-[#f5d77f] focus:ring-1 focus:ring-[#f5d77f] text-sm font-bold"
                       />
                     </div>
                   </div>
 
-                  {/* Popular Slot Presets */}
-                  <div>
-                    <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider block mb-1.5">
-                      Quick Slot Presets:
-                    </span>
-                    <div className="flex flex-wrap gap-1.5">
-                      {[
-                        { name: 'Marquee Players', slot: 1 },
-                        { name: 'Set 1 - Batsmen', slot: 2 },
-                        { name: 'Set 2 - All-Rounders', slot: 3 },
-                        { name: 'Set 3 - Fast Bowlers', slot: 4 },
-                        { name: 'Set 4 - Spinners', slot: 5 },
-                        { name: 'Set 5 - Wicket-Keepers', slot: 6 },
-                        { name: 'Emerging Talent', slot: 7 }
-                      ].map((preset) => (
-                        <button
-                          type="button"
-                          key={preset.name}
-                          onClick={() => {
-                            setSlotName(preset.name);
-                            setSlotNumber(preset.slot);
-                          }}
-                          className={`px-2.5 py-1 rounded-lg text-[10px] font-bold transition-all cursor-pointer border ${
-                            slotName === preset.name
-                              ? 'bg-amber-400 text-black border-amber-400 shadow-xs'
-                              : 'bg-zinc-900 text-zinc-300 hover:text-white border-zinc-700 hover:border-zinc-500'
-                          }`}
-                        >
-                          {preset.name} (Slot {preset.slot})
-                        </button>
-                      ))}
+                  {/* Reuse slots already created by the admin in this auction */}
+                  {adminCreatedSlots.length > 0 && (
+                    <div>
+                      <span className="text-[10px] font-bold text-[#a1b3cb] uppercase tracking-wider block mb-1.5">
+                        Your Created Slots:
+                      </span>
+                      <div className="flex flex-wrap gap-1.5">
+                        {adminCreatedSlots.map((item) => (
+                          <button
+                            type="button"
+                            key={`${item.slot}_${item.name}`}
+                            onClick={() => {
+                              setSlotName(item.name);
+                              setSlotNumber(item.slot);
+                            }}
+                            className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-colors cursor-pointer border ${
+                              slotName.trim().toLowerCase() === item.name.toLowerCase() &&
+                              Number(slotNumber) === item.slot
+                                ? 'bg-[#f5d77f] text-[#060c16] border-[#f5d77f]'
+                                : 'bg-[#0a1526] text-[#c5d3e8] hover:text-white border-[#162b4a] hover:border-[#f5d77f]/50'
+                            }`}
+                          >
+                            {item.slot}. {item.name}
+                          </button>
+                        ))}
+                      </div>
                     </div>
-                  </div>
+                  )}
                 </div>
 
                 {/* 2. PLAYER NAME */}
