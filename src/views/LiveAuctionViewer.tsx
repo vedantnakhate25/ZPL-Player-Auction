@@ -402,17 +402,17 @@ export function LiveAuctionViewer({
 
       {/* TOP BAR / HEADER */}
       <header
-        className={`w-full max-w-7xl mx-auto flex flex-col md:flex-row md:items-center md:justify-between gap-3 border-b border-[#162b4a] shrink-0 ${
-          isProjectorMode ? 'pb-1.5 mb-1.5' : 'pb-4 mb-6'
+        className={`w-full max-w-7xl mx-auto flex flex-col md:flex-row md:items-center md:justify-between gap-2.5 md:gap-4 border-b border-[#162b4a] shrink-0 ${
+          isProjectorMode ? 'pb-1.5 mb-1.5' : 'pb-3.5 sm:pb-4 mb-5 sm:mb-6'
         }`}
       >
-        {/* Left: Back + Title & Date */}
-        <div className="flex items-center justify-between md:justify-start gap-3 min-w-0">
-          <div className="flex items-center gap-3 min-w-0">
+        {/* Row 1 (Mobile) / Left Column (Desktop): Back + Title (+ Date/Time on md+) + Mobile Icon Buttons */}
+        <div className="flex items-center justify-between gap-2.5 min-w-0">
+          <div className="flex items-center gap-2.5 sm:gap-3 flex-1 min-w-0">
             {onNavigateHome && (
               <button
                 onClick={onNavigateHome}
-                className="h-9 flex items-center gap-1.5 px-3 rounded-xl bg-[#0a1526] hover:bg-[#10223d] border border-[#f5d77f]/35 text-[#f5d77f] font-bold text-xs sm:text-sm transition-colors shrink-0 cursor-pointer whitespace-nowrap"
+                className="h-9 flex items-center justify-center gap-1.5 px-2.5 sm:px-3 rounded-xl bg-[#0a1526] hover:bg-[#10223d] border border-[#f5d77f]/35 text-[#f5d77f] font-bold text-xs sm:text-sm transition-colors shrink-0 cursor-pointer whitespace-nowrap"
                 title="Back to Home"
               >
                 <ArrowLeft className="w-4 h-4 shrink-0" />
@@ -420,15 +420,16 @@ export function LiveAuctionViewer({
               </button>
             )}
 
-            <div className="min-w-0">
+            <div className="min-w-0 flex-1">
               <h1
-                className={`font-black text-white truncate tracking-tight ${
-                  isProjectorMode ? 'text-base sm:text-xl' : 'text-lg sm:text-2xl'
+                className={`font-black text-white truncate tracking-tight leading-tight ${
+                  isProjectorMode ? 'text-base sm:text-xl' : 'text-base sm:text-xl md:text-2xl'
                 }`}
               >
                 {auction.name}
               </h1>
-              <div className="flex items-center gap-2 text-[11px] sm:text-xs text-[#a1b3cb] mt-0.5">
+              {/* Desktop inline date/time */}
+              <div className="hidden md:flex items-center gap-2 text-xs text-[#a1b3cb] mt-0.5">
                 <span className="inline-flex items-center gap-1 whitespace-nowrap">
                   <Calendar className="w-3 h-3 text-[#f5d77f]" />
                   {auction.date}
@@ -484,9 +485,9 @@ export function LiveAuctionViewer({
           </div>
         </div>
 
-        {/* Right: Live Status, Viewer Count & Desktop Controls */}
-        <div className="flex items-center justify-between md:justify-end gap-3 shrink-0">
-          <div className="flex items-center gap-3 text-xs">
+        {/* Row 2 (Mobile) / Right Column (Desktop): Status, Viewers, Date/Time (Mobile) & Desktop Controls */}
+        <div className="flex flex-wrap items-center justify-between md:justify-end gap-x-3 gap-y-2 shrink-0">
+          <div className="flex flex-wrap items-center gap-2 sm:gap-2.5 text-xs">
             {auctionState?.status === 'completed' || auction.status === 'completed' ? (
               <span className="px-2.5 py-1 rounded-lg bg-[#0a1526] border border-[#162b4a] text-[#c5d3e8] font-bold tracking-wider uppercase whitespace-nowrap">
                 COMPLETED
@@ -506,6 +507,12 @@ export function LiveAuctionViewer({
               </span>
             )}
 
+            {auctionState?.round === 'unsold' && (
+              <span className="md:hidden px-2 py-1 rounded-lg bg-rose-500/15 border border-rose-500/45 text-rose-300 text-[10px] font-black tracking-wider uppercase whitespace-nowrap">
+                Unsold Round
+              </span>
+            )}
+
             <div
               className="inline-flex items-center gap-1.5 text-[#c5d3e8] font-semibold whitespace-nowrap tabular-nums"
               title="Active viewers watching live"
@@ -514,6 +521,19 @@ export function LiveAuctionViewer({
               <span className="font-bold text-white">{formatViewerCount(liveViewerCount)}</span>
               <span className="text-[#a1b3cb]">watching</span>
             </div>
+          </div>
+
+          {/* Mobile Date & Time — Cleanly aligned on its own side with zero icon overlap */}
+          <div className="flex md:hidden items-center gap-1.5 text-[11px] text-[#a1b3cb] whitespace-nowrap">
+            <span className="inline-flex items-center gap-1">
+              <Calendar className="w-3 h-3 text-[#f5d77f]" />
+              {auction.date}
+            </span>
+            <span aria-hidden="true">&middot;</span>
+            <span className="inline-flex items-center gap-1">
+              <Clock className="w-3 h-3 text-[#f5d77f]" />
+              {auction.time}
+            </span>
           </div>
 
           <div className="hidden md:flex items-center gap-2">

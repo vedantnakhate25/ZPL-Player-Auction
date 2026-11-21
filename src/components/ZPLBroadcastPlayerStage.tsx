@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import type { Auction, AuctionState, Team, Player } from '../types/auction';
-import { Trophy, Shield, Target, Zap, Award, Check, X } from 'lucide-react';
+import { Trophy, Shield, Target, Zap, Award, Check, X, History } from 'lucide-react';
 
 interface ZPLBroadcastPlayerStageProps {
   auction: Auction;
@@ -14,10 +14,13 @@ function ZPLBroadcastPlayerStageComponent({
   auction,
   auctionState,
   teams,
+  players = [],
   isProjectorMode = false,
 }: ZPLBroadcastPlayerStageProps) {
   const [photoError, setPhotoError] = useState(false);
   const [teamLogoError, setTeamLogoError] = useState(false);
+  const [lastSoldPhotoError, setLastSoldPhotoError] = useState(false);
+  const [lastSoldTeamLogoError, setLastSoldTeamLogoError] = useState(false);
 
   // Current player details
   const playerName = String(auctionState?.currentPlayerName || 'Player on Floor').toUpperCase();
@@ -74,6 +77,84 @@ function ZPLBroadcastPlayerStageComponent({
     setTeamLogoError(false);
   }, [holdingTeamLogo, holdingTeam?.id]);
 
+  // Resolve most recently sold player for right-side Last Sold showcase panel
+  const lastSoldPlayer = useMemo(() => {
+    const safePlayers = Array.isArray(players) ? players : [];
+    const safeTeams = Array.isArray(teams) ? teams : [];
+
+    if (auctionState?.lastSoldPlayerName) {
+      const targetName = auctionState.lastSoldPlayerName.trim().toLowerCase();
+      const matchedPlayer = safePlayers.find(
+        (p) => p.status === 'sold' && p.name.trim().toLowerCase() === targetName
+      );
+      const targetTeamName = (auctionState.lastSoldTeamName || matchedPlayer?.soldToTeamName || '')
+        .trim()
+        .toLowerCase();
+      const matchedTeam = safeTeams.find(
+        (t) =>
+          (matchedPlayer?.soldToTeamId && t.id === matchedPlayer.soldToTeamId) ||
+          (targetTeamName && t.name.trim().toLowerCase() === targetTeamName)
+      );
+
+      return {
+        name: auctionState.lastSoldPlayerName,
+        role: matchedPlayer?.role || '',
+        photoUrl: auctionState.lastSoldPlayerPhoto || matchedPlayer?.photoUrl || '',
+        teamName:
+          auctionState.lastSoldTeamName ||
+          matchedTeam?.name ||
+          matchedPlayer?.soldToTeamName ||
+          'Winning Team',
+        teamLogo:
+          matchedTeam?.logoUrl ||
+          auctionState.lastSoldTeamLogo ||
+          matchedPlayer?.soldToTeamLogo ||
+          '',
+        points: auctionState.lastSoldPoints ?? matchedPlayer?.soldPoints ?? 0
+      };
+    }
+
+    const soldList = safePlayers
+      .filter((p) => p.status === 'sold')
+      .sort((a, b) => {
+        const ta = a.updatedAt ? Date.parse(a.updatedAt) : 0;
+        const tb = b.updatedAt ? Date.parse(b.updatedAt) : 0;
+        return tb - ta;
+      });
+
+    if (soldList.length === 0) return null;
+
+    const latest = soldList[0];
+    const matchedTeam = safeTeams.find(
+      (t) =>
+        (latest.soldToTeamId && t.id === latest.soldToTeamId) ||
+        (latest.soldToTeamName &&
+          t.name.trim().toLowerCase() === latest.soldToTeamName.trim().toLowerCase())
+    );
+
+    return {
+      name: latest.name,
+      role: latest.role,
+      photoUrl: latest.photoUrl || '',
+      teamName: latest.soldToTeamName || matchedTeam?.name || 'Winning Team',
+      teamLogo: matchedTeam?.logoUrl || latest.soldToTeamLogo || '',
+      points: latest.soldPoints ?? latest.basePoints ?? 0
+    };
+  }, [
+    auctionState?.lastSoldPlayerName,
+    auctionState?.lastSoldPlayerPhoto,
+    auctionState?.lastSoldPoints,
+    auctionState?.lastSoldTeamName,
+    auctionState?.lastSoldTeamLogo,
+    players,
+    teams
+  ]);
+
+  useEffect(() => {
+    setLastSoldPhotoError(false);
+    setLastSoldTeamLogoError(false);
+  }, [lastSoldPlayer?.name, lastSoldPlayer?.photoUrl, lastSoldPlayer?.teamLogo]);
+
   const tournamentTitle = (auction.name || 'ZPL AUCTION 2027').trim();
   const organizationTitle = 'ZHEP KRIDA MANDAL';
 
@@ -112,7 +193,7 @@ function ZPLBroadcastPlayerStageComponent({
 
   return (
     <div
-      className={`relative w-full max-w-6xl mx-auto rounded-2xl sm:rounded-3xl bg-[#060c16] border border-[#f5d77f]/35 shadow-2xl overflow-hidden flex flex-col justify-between selection:bg-[#f5d77f] selection:text-[#060c16] ${
+      className={`relative w-full max-w-7xl mx-auto rounded-2xl sm:rounded-3xl bg-[#060c16] border border-[#f5d77f]/35 shadow-2xl overflow-hidden flex flex-col justify-between selection:bg-[#f5d77f] selection:text-[#060c16] ${
         isProjectorMode ? 'h-full flex-1 min-h-0' : ''
       }`}
     >
@@ -180,16 +261,22 @@ function ZPLBroadcastPlayerStageComponent({
         </div>
       </div>
 
-      {/* 2. MAIN BROADCAST STAGE */}
+      {/* 2. MAIN BROADCAST STAGE + RIGHT-SIDE LAST SOLD PLAYER PANEL */}
       <div
         className={`relative px-2.5 sm:px-5 md:px-6 ${
           isProjectorMode
-            ? 'py-1.5 gap-2.5 flex-1 min-h-0 justify-between'
-            : 'pt-1.5 pb-4 sm:pb-6 gap-3.5 sm:gap-4'
-        } flex flex-col w-full max-w-5xl mx-auto`}
+            ? 'py-1.5 gap-3 flex-1 min-h-0'
+            : 'pt-1.5 pb-4 sm:pb-6 gap-4'
+        } flex flex-col lg:flex-row items-stretch w-full max-w-7xl mx-auto`}
       >
-        {/* TOP CARD: ACTIVE PLAYER PROFILE */}
-        <div className={`w-full ${isProjectorMode ? 'flex-[1.5] min-h-0 flex flex-col' : ''}`}>
+        {/* LEFT COLUMN: ACTIVE PLAYER PROFILE & HIGHEST BIDDER */}
+        <div
+          className={`flex-1 min-w-0 flex flex-col ${
+            isProjectorMode ? 'gap-2.5 min-h-0 justify-between' : 'gap-3.5 sm:gap-4'
+          }`}
+        >
+          {/* TOP CARD: ACTIVE PLAYER PROFILE */}
+          <div className={`w-full ${isProjectorMode ? 'flex-[1.5] min-h-0 flex flex-col' : ''}`}>
           <div
             className={`relative w-full rounded-2xl bg-gradient-to-b from-[#0b172a] via-[#081220] to-[#060d18] border border-[#f5d77f]/35 shadow-xl overflow-hidden ${
               isProjectorMode ? 'h-full flex flex-col' : ''
@@ -562,6 +649,151 @@ function ZPLBroadcastPlayerStageComponent({
             )}
           </div>
         </div>
+        </div>
+
+        {/* RIGHT SIDEBAR: PAST / LAST SOLD PLAYER SHOWCASE (Desktop & Projector Widescreen Only) */}
+        <aside
+          className={`hidden lg:flex w-full lg:w-[290px] xl:w-[315px] shrink-0 flex-col ${
+            isProjectorMode ? 'min-h-0' : ''
+          }`}
+        >
+          <div className="relative w-full h-full rounded-2xl bg-gradient-to-b from-[#0b172a] via-[#081220] to-[#060d18] border border-[#f5d77f]/35 shadow-xl overflow-hidden flex flex-col">
+            {/* Sidebar Header Strip */}
+            <div
+              className={`px-4 ${
+                isProjectorMode ? 'py-1.5' : 'py-2.5'
+              } bg-[#0c1a30] border-b border-[#f5d77f]/25 flex items-center justify-center gap-2 shrink-0`}
+            >
+              <History className="w-3.5 h-3.5 text-[#f5d77f]" />
+              <span className="text-[11px] sm:text-xs font-black tracking-[0.18em] uppercase text-[#fff4c2]">
+                Last Sold
+              </span>
+            </div>
+
+            {lastSoldPlayer ? (
+              <div
+                className={`flex-1 flex flex-col justify-between ${
+                  isProjectorMode ? 'p-3 gap-2.5' : 'p-4 gap-4'
+                }`}
+              >
+                {/* Inner Framed Broadcast Card */}
+                <div
+                  className={`flex-1 rounded-2xl bg-[#060d17] border border-[#162b4a] flex flex-col items-center justify-between text-center ${
+                    isProjectorMode ? 'p-3 gap-2.5' : 'p-4 gap-3.5'
+                  }`}
+                >
+                  {/* Top Row: Winning Team Logo (left) + SOLD TO / Team Name (right) */}
+                  <div className="w-full flex items-start justify-between gap-2.5">
+                    <div className="w-11 h-11 rounded-xl p-[1.5px] bg-gradient-to-br from-[#f5d77f] via-[#c59f33] to-[#8c6e18] shadow-md shrink-0">
+                      <div className="w-full h-full rounded-[10px] bg-[#060c16] overflow-hidden flex items-center justify-center">
+                        {lastSoldPlayer.teamLogo && !lastSoldTeamLogoError ? (
+                          <img
+                            src={lastSoldPlayer.teamLogo}
+                            alt={lastSoldPlayer.teamName}
+                            referrerPolicy="no-referrer"
+                            onError={() => setLastSoldTeamLogoError(true)}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <div className="w-full h-full flex flex-col items-center justify-center bg-[#0a1526] text-[#f5d77f]">
+                            <Shield className="w-4 h-4 text-[#f5d77f]" />
+                            <span className="text-[8px] font-black uppercase leading-none mt-0.5">
+                              {lastSoldPlayer.teamName.slice(0, 3)}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="text-right min-w-0 flex-1">
+                      <span className="block text-[9px] font-bold uppercase tracking-[0.16em] text-[#a1b3cb]">
+                        ZPL Auction
+                      </span>
+                      <span className="block text-[10px] font-black uppercase tracking-[0.14em] text-[#f5d77f]">
+                        Sold To
+                      </span>
+                      <p className="text-xs sm:text-sm font-black uppercase text-white tracking-wide leading-tight break-words mt-0.5">
+                        {lastSoldPlayer.teamName}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Center: Past Sold Player Portrait */}
+                  <div
+                    className={`${
+                      isProjectorMode
+                        ? 'w-32 h-36 xl:w-40 xl:h-44'
+                        : 'w-40 h-44 sm:w-44 sm:h-48'
+                    } rounded-2xl p-[2px] bg-gradient-to-b from-[#f5d77f] via-[#224270] to-[#f5d77f] shadow-lg shrink-0`}
+                  >
+                    <div className="w-full h-full rounded-[14px] bg-[#0a1526] overflow-hidden flex items-center justify-center">
+                      {lastSoldPlayer.photoUrl && !lastSoldPhotoError ? (
+                        <img
+                          src={lastSoldPlayer.photoUrl}
+                          alt={lastSoldPlayer.name}
+                          referrerPolicy="no-referrer"
+                          onError={() => setLastSoldPhotoError(true)}
+                          className="w-full h-full object-cover object-top"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex flex-col items-center justify-center text-[#f5d77f]/70 p-2">
+                          <Trophy className="w-10 h-10 text-[#f5d77f] mb-1" />
+                          <span className="text-[10px] font-black uppercase text-[#a1b3cb]">
+                            ZPL Player
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Player Name & Role */}
+                  <div className="w-full space-y-0.5 min-w-0">
+                    <h4
+                      className={`${
+                        isProjectorMode ? 'text-base xl:text-lg' : 'text-lg sm:text-xl'
+                      } font-black text-white uppercase tracking-wide leading-tight break-words`}
+                    >
+                      {lastSoldPlayer.name}
+                    </h4>
+                    {lastSoldPlayer.role && (
+                      <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-[#f5d77f]">
+                        {lastSoldPlayer.role}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Bottom Sold Price Plaque */}
+                  <div className="w-full rounded-xl bg-[#0a1526] border border-[#f5d77f]/55 py-2.5 px-3 text-center shadow-inner">
+                    <span className="block text-[9px] font-bold uppercase tracking-[0.18em] text-[#a1b3cb] mb-0.5">
+                      Points Sold
+                    </span>
+                    <div
+                      className={`${
+                        isProjectorMode ? 'text-xl xl:text-2xl' : 'text-2xl'
+                      } font-black text-[#fff4c2] tracking-tight leading-none tabular-nums whitespace-nowrap`}
+                    >
+                      <span className="text-[#f5d77f] mr-0.5">₹</span>
+                      {lastSoldPlayer.points}{' '}
+                      <span className="text-xs font-black text-[#f5d77f] uppercase">PTS</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="flex-1 p-5 flex flex-col items-center justify-center text-center space-y-2.5 min-h-[200px]">
+                <div className="w-12 h-12 rounded-2xl bg-[#060d17] border border-[#162b4a] flex items-center justify-center text-[#f5d77f]/70">
+                  <Trophy className="w-6 h-6" />
+                </div>
+                <p className="text-xs sm:text-sm font-black uppercase tracking-wider text-white">
+                  No Past Sale Yet
+                </p>
+                <p className="text-xs text-[#a1b3cb] max-w-[200px]">
+                  The most recently sold player, winning team, and final points will appear here.
+                </p>
+              </div>
+            )}
+          </div>
+        </aside>
       </div>
     </div>
   );
