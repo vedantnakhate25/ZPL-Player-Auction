@@ -1,6 +1,6 @@
 import React from 'react';
 import { ZPLAuctionStageEmblem } from './ZPLAuctionStageEmblem';
-import { Shield, ArrowRight } from 'lucide-react';
+import { Shield } from 'lucide-react';
 import type { Auction } from '../types/auction';
 
 interface ZPLAuctionStageHeroProps {
@@ -72,20 +72,6 @@ export function ZPLAuctionStageHero({
           <p className="text-xs sm:text-sm text-[#c5d3e8] font-medium max-w-md mx-auto">
             Live real-time franchise bidding, instant purse tracking, and official squad rosters.
           </p>
-
-          {activeAuction && onSelectAuction && (
-            <div className="pt-2">
-              <button
-                onClick={() => onSelectAuction(activeAuction.id)}
-                className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-[#fff4c2] via-[#f5d77f] to-[#e0bc50] hover:from-white hover:to-[#f5d77f] text-[#060c16] font-black text-sm uppercase tracking-wider shadow-lg transition-transform active:scale-[0.98] cursor-pointer whitespace-nowrap"
-              >
-                <span>
-                  {activeAuction.status === 'live' ? 'Watch Live Auction' : 'Open Auction Stage'}
-                </span>
-                <ArrowRight className="w-4 h-4 stroke-[2.5]" />
-              </button>
-            </div>
-          )}
         </div>
       </div>
     </section>

@@ -19,9 +19,11 @@ import {
   VolumeX,
   Share2,
   Eye,
-  ArrowLeft
+  ArrowLeft,
+  FileSpreadsheet
 } from 'lucide-react';
 import { useLiveViewers, formatViewerCount } from '../lib/useLiveViewers';
+import { exportAuctionResultsToExcel } from '../lib/exportAuctionExcel';
 
 interface LiveAuctionViewerProps {
   auctionId: string;
@@ -584,7 +586,7 @@ export function LiveAuctionViewer({
       {/* MAIN VIEWPORT */}
       <main
         className={`w-full max-w-7xl mx-auto flex-1 min-h-0 flex flex-col justify-center ${
-          isProjectorMode ? 'overflow-hidden' : ''
+          isProjectorMode ? 'overflow-y-auto md:overflow-hidden' : ''
         }`}
       >
         {auctionState?.status === 'completed' ? (
@@ -595,13 +597,25 @@ export function LiveAuctionViewer({
                 : 'max-w-4xl mx-auto py-8 px-6 rounded-3xl bg-[#0a1526] border border-[#f5d77f]/25 shadow-xl space-y-5'
             }`}
           >
-            <div className="shrink-0 space-y-2">
+            <div className="shrink-0 space-y-2.5">
               <CheckCircle2 className="w-14 h-14 text-[#f5d77f] mx-auto" />
               <h2 className="text-2xl sm:text-3xl font-black text-white">Auction Completed</h2>
               <p className="text-[#c5d3e8] text-sm sm:text-base tabular-nums">
                 Players sold: <strong className="text-[#f5d77f] font-black">{soldCount}</strong> /{' '}
                 {totalPlayers}
               </p>
+              {!isProjectorMode && (
+                <div className="pt-1">
+                  <button
+                    type="button"
+                    onClick={() => exportAuctionResultsToExcel(auction, teams, players)}
+                    className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-[#fff4c2] via-[#f5d77f] to-[#e0bc50] hover:from-white hover:to-[#f5d77f] text-[#060c16] text-xs sm:text-sm font-black uppercase tracking-wider shadow-lg transition-transform active:scale-[0.98] cursor-pointer whitespace-nowrap"
+                  >
+                    <FileSpreadsheet className="w-4 h-4 stroke-[2.2]" />
+                    <span>Download Excel Results (.xlsx)</span>
+                  </button>
+                </div>
+              )}
             </div>
             <div className={`w-full ${isProjectorMode ? 'flex-1 min-h-0 pt-2 overflow-y-auto' : 'pt-2'}`}>
               <TeamPurseBoard teams={teams} players={players} isProjectorMode={isProjectorMode} />
@@ -659,7 +673,7 @@ export function LiveAuctionViewer({
           /* LIVE BROADCAST STAGE */
           <div
             className={`w-full flex-1 flex flex-col justify-center min-h-0 ${
-              isProjectorMode ? 'py-0 h-full overflow-hidden' : 'py-1 space-y-6'
+              isProjectorMode ? 'py-0 h-full overflow-y-auto md:overflow-hidden' : 'py-1 space-y-6'
             }`}
           >
             <ZPLBroadcastPlayerStage

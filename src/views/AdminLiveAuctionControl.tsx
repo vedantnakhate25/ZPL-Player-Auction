@@ -14,6 +14,7 @@ import { CelebrationConfetti } from '../components/CelebrationConfetti';
 import { PlayerDecisionPopup } from '../components/PlayerDecisionPopup';
 import { AdminPreAuctionPhotoManager } from '../components/AdminPreAuctionPhotoManager';
 import { useLiveViewers, formatViewerCount } from '../lib/useLiveViewers';
+import { exportAuctionResultsToExcel } from '../lib/exportAuctionExcel';
 import {
   Play,
   Pause,
@@ -34,7 +35,8 @@ import {
   SlidersHorizontal,
   Zap,
   Image as ImageIcon,
-  Gavel
+  Gavel,
+  FileSpreadsheet
 } from 'lucide-react';
 
 interface AdminLiveAuctionControlProps {
@@ -752,6 +754,16 @@ export function AdminLiveAuctionControl({
           >
             <Shield className="w-4 h-4 text-[#f5d77f]" />
             <span>Results</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => exportAuctionResultsToExcel(auction, teams, players)}
+            title="Download full auction results and team squads as Excel (.xlsx)"
+            className="h-10 inline-flex items-center gap-1.5 px-3.5 rounded-xl bg-emerald-950/70 hover:bg-emerald-900/80 border border-emerald-500/45 text-xs font-bold text-emerald-300 hover:text-white transition-colors cursor-pointer whitespace-nowrap"
+          >
+            <FileSpreadsheet className="w-4 h-4 text-emerald-400" />
+            <span>Export Excel</span>
           </button>
 
           {auctionState?.status === 'live' && (

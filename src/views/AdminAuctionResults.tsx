@@ -9,16 +9,13 @@ import {
 } from '../lib/firebase';
 import type { Auction, Team, Player } from '../types/auction';
 import { SocialFollowStrip } from '../components/SocialFollowStrip';
+import { exportAuctionResultsToExcel } from '../lib/exportAuctionExcel';
 import {
-  Users,
-  Coins,
   Shield,
-  CheckCircle2,
   XCircle,
   ChevronLeft,
-  Share2,
   ExternalLink,
-  Trophy
+  FileSpreadsheet
 } from 'lucide-react';
 
 interface AdminAuctionResultsProps {
@@ -127,12 +124,21 @@ export function AdminAuctionResults({ auctionId, onBack }: AdminAuctionResultsPr
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-2.5 sm:gap-3">
+            <button
+              type="button"
+              onClick={() => exportAuctionResultsToExcel(auction, teams, players)}
+              className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-[#fff4c2] via-[#f5d77f] to-[#e0bc50] hover:from-white hover:to-[#f5d77f] text-[#060c16] text-xs sm:text-sm font-black uppercase tracking-wider shadow-lg transition-transform active:scale-[0.98] cursor-pointer whitespace-nowrap"
+            >
+              <FileSpreadsheet className="w-4 h-4 stroke-[2.2]" />
+              <span>Download Excel (.xlsx)</span>
+            </button>
+
             <a
               href={`?auction=${auctionId}`}
               target="_blank"
               rel="noreferrer"
-              className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-[#0a1526] hover:bg-[#0f1d33] border border-[#f5d77f]/40 text-xs sm:text-sm font-bold text-[#f5d77f] hover:text-white transition-colors shadow-sm cursor-pointer"
+              className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-[#0a1526] hover:bg-[#0f1d33] border border-[#f5d77f]/40 text-xs sm:text-sm font-bold text-[#f5d77f] hover:text-white transition-colors shadow-sm cursor-pointer whitespace-nowrap"
             >
               <ExternalLink className="w-4 h-4 text-[#f5d77f]" />
               <span>Public Screen</span>

@@ -192,7 +192,7 @@ function ZPLBroadcastPlayerStageComponent({
         <div className={`w-full ${isProjectorMode ? 'flex-[1.5] min-h-0 flex flex-col' : ''}`}>
           <div
             className={`relative w-full rounded-2xl bg-gradient-to-b from-[#0b172a] via-[#081220] to-[#060d18] border border-[#f5d77f]/35 shadow-xl overflow-hidden ${
-              isProjectorMode ? 'h-full flex flex-col justify-between' : ''
+              isProjectorMode ? 'h-full flex flex-col' : ''
             }`}
           >
             {/* Card Header Bar */}
@@ -238,12 +238,12 @@ function ZPLBroadcastPlayerStageComponent({
               </div>
             </div>
 
-            {/* Player Body: Stacks vertically on mobile so details get FULL 100% width with ZERO shrinking; side-by-side on sm+ & Projector Mode */}
+            {/* Player Body: Stacks vertically below md (768px) so details always have full width; side-by-side on md+ */}
             <div
               className={`p-3.5 sm:p-5 ${
                 isProjectorMode
-                  ? 'py-2.5 gap-4 flex-1 min-h-0 flex-row items-center'
-                  : 'gap-4 sm:gap-6 flex-col sm:flex-row items-center'
+                  ? 'py-3 gap-4 md:gap-5 flex-1 min-h-0 flex-col md:flex-row items-center justify-center'
+                  : 'gap-4 md:gap-6 flex-col md:flex-row items-center'
               } flex`}
             >
               {/* Player Photo Frame */}
@@ -251,8 +251,8 @@ function ZPLBroadcastPlayerStageComponent({
                 <div
                   className={`relative ${
                     isProjectorMode
-                      ? 'w-36 h-36 sm:w-48 sm:h-48 md:w-56 md:h-56 lg:w-60 lg:h-60'
-                      : 'w-44 h-44 sm:w-52 sm:h-52 md:w-60 md:h-60 lg:w-68 lg:h-68'
+                      ? 'w-36 h-36 sm:w-44 sm:h-44 md:w-52 md:h-52 lg:w-60 lg:h-60'
+                      : 'w-44 h-44 sm:w-52 sm:h-52 md:w-56 md:h-56 lg:w-64 lg:h-64'
                   } rounded-2xl bg-gradient-to-b from-[#f5d77f] via-[#224270] to-[#f5d77f] p-[2.5px] shadow-xl`}
                 >
                   <div className="w-full h-full rounded-[14px] bg-[#060c16] overflow-hidden flex items-center justify-center">
@@ -282,18 +282,10 @@ function ZPLBroadcastPlayerStageComponent({
                 </div>
               </div>
 
-              {/* Player Info & Live Bid Metrics (Full Width on Mobile — Zero Cramping) */}
-              <div
-                className={`w-full flex-1 min-w-0 flex flex-col justify-center space-y-3 sm:space-y-3.5 ${
-                  isProjectorMode ? 'text-left' : 'text-center sm:text-left'
-                }`}
-              >
+              {/* Player Info & Live Bid Metrics */}
+              <div className="w-full flex-1 min-w-0 flex flex-col justify-center space-y-3 sm:space-y-3.5 text-center md:text-left">
                 <div>
-                  <div
-                    className={`flex flex-wrap items-center gap-2 ${
-                      isProjectorMode ? 'justify-between' : 'justify-center sm:justify-between'
-                    }`}
-                  >
+                  <div className="flex flex-wrap items-center justify-center md:justify-between gap-2">
                     <h3
                       className={`${
                         isProjectorMode
@@ -316,58 +308,64 @@ function ZPLBroadcastPlayerStageComponent({
                   </p>
                 </div>
 
-                {/* Broadcast Metrics Row — Full Width, Crisp Single-Line Values */}
-                <div className="grid grid-cols-3 rounded-xl bg-[#060d17] border border-[#162b4a] divide-x divide-[#162b4a] text-center">
-                  <div className="px-1.5 py-2.5 sm:px-3 sm:py-3.5 min-w-0">
-                    <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-[#a1b3cb] block mb-1 whitespace-nowrap">
+                {/* Broadcast Metrics Row — Equal-Height Cells, Zero Overlap, Aligned Baselines */}
+                <div className="grid grid-cols-3 items-stretch rounded-xl bg-[#060d17] border border-[#162b4a] divide-x divide-[#162b4a] overflow-hidden">
+                  <div className="flex flex-col items-center justify-center gap-1.5 px-1.5 py-2.5 sm:px-3 sm:py-3.5 min-w-0 overflow-hidden text-center">
+                    <span className="text-[9px] min-[380px]:text-[10px] sm:text-xs font-bold uppercase tracking-wide text-[#a1b3cb] leading-tight truncate max-w-full">
                       Base Price
                     </span>
                     <span
                       className={`${
-                        isProjectorMode ? 'text-sm sm:text-lg' : 'text-sm min-[400px]:text-base sm:text-lg md:text-xl'
-                      } font-black text-white tracking-tight tabular-nums whitespace-nowrap`}
+                        isProjectorMode
+                          ? 'text-sm sm:text-base md:text-lg'
+                          : 'text-sm min-[380px]:text-base sm:text-lg md:text-xl'
+                      } font-black text-white tracking-tight leading-none tabular-nums whitespace-nowrap`}
                     >
                       ₹ {basePoints}{' '}
-                      <span className="text-[10px] sm:text-xs text-[#a1b3cb] font-bold">PTS</span>
+                      <span className="text-[9px] sm:text-xs text-[#a1b3cb] font-bold">PTS</span>
                     </span>
                   </div>
 
-                  <div className="px-1.5 py-2.5 sm:px-3 sm:py-3.5 min-w-0">
-                    <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-[#a1b3cb] block mb-1 whitespace-nowrap">
+                  <div className="flex flex-col items-center justify-center gap-1.5 px-1.5 py-2.5 sm:px-3 sm:py-3.5 min-w-0 overflow-hidden text-center">
+                    <span className="text-[9px] min-[380px]:text-[10px] sm:text-xs font-bold uppercase tracking-wide text-[#a1b3cb] leading-tight truncate max-w-full">
                       Pool / Slot
                     </span>
                     <span
                       className={`${
-                        isProjectorMode ? 'text-sm sm:text-lg' : 'text-sm min-[400px]:text-base sm:text-lg md:text-xl'
-                      } font-black text-[#f5d77f] tracking-tight block truncate`}
+                        isProjectorMode
+                          ? 'text-sm sm:text-base md:text-lg'
+                          : 'text-sm min-[380px]:text-base sm:text-lg md:text-xl'
+                      } font-black text-[#f5d77f] tracking-tight leading-none truncate max-w-full`}
                       title={slotLabel}
                     >
                       {slotLabel}
                     </span>
                   </div>
 
-                  <div className="px-1.5 py-2.5 sm:px-3 sm:py-3.5 min-w-0">
-                    <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-[#a1b3cb] block mb-1 whitespace-nowrap">
+                  <div className="flex flex-col items-center justify-center gap-1.5 px-1.5 py-2.5 sm:px-3 sm:py-3.5 min-w-0 overflow-hidden text-center">
+                    <span className="text-[9px] min-[380px]:text-[10px] sm:text-xs font-bold uppercase tracking-wide text-[#a1b3cb] leading-tight truncate max-w-full">
                       {isSold ? 'Final Price' : isBiddingActive ? 'Current Bid' : 'Opening Bid'}
                     </span>
                     <span
                       className={`${
-                        isProjectorMode ? 'text-sm sm:text-lg' : 'text-sm min-[400px]:text-base sm:text-lg md:text-xl'
-                      } font-black tracking-tight tabular-nums whitespace-nowrap ${
+                        isProjectorMode
+                          ? 'text-sm sm:text-base md:text-lg'
+                          : 'text-sm min-[380px]:text-base sm:text-lg md:text-xl'
+                      } font-black tracking-tight leading-none tabular-nums whitespace-nowrap ${
                         isSold ? 'text-emerald-400' : isUnsold ? 'text-rose-400' : 'text-[#fff4c2]'
                       }`}
                     >
                       ₹ {currentBid}{' '}
-                      <span className="text-[10px] sm:text-xs font-bold text-[#f5d77f] uppercase">
+                      <span className="text-[9px] sm:text-xs font-bold text-[#f5d77f] uppercase">
                         PTS
                       </span>
                     </span>
                   </div>
                 </div>
 
-                {/* Live Bid Status Bar — Full Width, Clearly Readable on Mobile */}
+                {/* Live Bid Status Bar — Clean Horizontal Alignment, Never Stacks Word-by-Word */}
                 {isSold ? (
-                  <div className="rounded-xl bg-emerald-500/15 border border-emerald-500/45 px-3.5 py-2.5 flex items-center justify-between gap-2 text-left">
+                  <div className="rounded-xl bg-emerald-500/15 border border-emerald-500/45 px-3.5 py-2.5 flex flex-wrap items-center justify-between gap-x-3 gap-y-1 text-left">
                     <span className="text-xs sm:text-sm font-bold text-emerald-200 uppercase tracking-wide leading-snug min-w-0">
                       Sold To:{' '}
                       <strong className="text-white font-black">
@@ -379,8 +377,8 @@ function ZPLBroadcastPlayerStageComponent({
                     </span>
                   </div>
                 ) : isUnsold ? (
-                  <div className="rounded-xl bg-rose-500/15 border border-rose-500/45 px-3.5 py-2.5 flex items-center justify-between gap-2 text-left">
-                    <span className="text-xs sm:text-sm font-bold text-rose-300 uppercase tracking-wide">
+                  <div className="rounded-xl bg-rose-500/15 border border-rose-500/45 px-3.5 py-2.5 flex flex-wrap items-center justify-between gap-x-3 gap-y-1 text-left">
+                    <span className="text-xs sm:text-sm font-bold text-rose-300 uppercase tracking-wide whitespace-nowrap">
                       Status: Unsold
                     </span>
                     <span className="text-xs font-bold text-[#a1b3cb] uppercase whitespace-nowrap">
@@ -388,7 +386,7 @@ function ZPLBroadcastPlayerStageComponent({
                     </span>
                   </div>
                 ) : isBiddingActive && holdingTeam ? (
-                  <div className="rounded-xl bg-[#f5d77f]/12 border border-[#f5d77f]/45 px-3.5 py-2.5 flex items-center justify-between gap-2 text-left">
+                  <div className="rounded-xl bg-[#f5d77f]/12 border border-[#f5d77f]/45 px-3.5 py-2.5 flex flex-wrap items-center justify-between gap-x-3 gap-y-1 text-left">
                     <span className="text-xs sm:text-sm font-bold text-[#fff2a8] uppercase tracking-wide leading-snug min-w-0">
                       Leading:{' '}
                       <strong className="text-white font-black">{holdingTeam.name}</strong>
@@ -398,8 +396,8 @@ function ZPLBroadcastPlayerStageComponent({
                     </span>
                   </div>
                 ) : (
-                  <div className="rounded-xl bg-[#060d17] border border-[#162b4a] px-3.5 py-2.5 flex items-center justify-between gap-2 text-left">
-                    <span className="text-xs sm:text-sm font-bold text-[#a1b3cb] uppercase tracking-wide">
+                  <div className="rounded-xl bg-[#060d17] border border-[#162b4a] px-3.5 py-2.5 flex flex-wrap items-center justify-between gap-x-3 gap-y-1 text-left">
+                    <span className="text-[11px] sm:text-xs md:text-sm font-bold text-[#a1b3cb] uppercase tracking-wide whitespace-nowrap">
                       Ready For Opening Bid
                     </span>
                     <span className="text-xs sm:text-sm font-black text-[#f5d77f] uppercase tabular-nums whitespace-nowrap shrink-0">
@@ -416,7 +414,7 @@ function ZPLBroadcastPlayerStageComponent({
         <div className={`w-full ${isProjectorMode ? 'flex-[0.95] min-h-0 flex flex-col' : ''}`}>
           <div
             className={`relative w-full rounded-2xl bg-gradient-to-b from-[#0b172a] via-[#081220] to-[#060d18] border border-[#f5d77f]/35 shadow-xl overflow-hidden ${
-              isProjectorMode ? 'h-full flex flex-col justify-between' : ''
+              isProjectorMode ? 'h-full flex flex-col' : 'flex flex-col'
             }`}
           >
             <div
@@ -439,9 +437,13 @@ function ZPLBroadcastPlayerStageComponent({
                   <span className="text-[11px] sm:text-xs font-black uppercase tracking-wider text-[#f5d77f]">
                     Holding Bid
                   </span>
+                ) : isUnsold ? (
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-rose-400">
+                    Unsold
+                  </span>
                 ) : (
                   <span className="text-[11px] font-bold uppercase tracking-wider text-[#a1b3cb]">
-                    Awaiting Bid
+                    No Bids Yet
                   </span>
                 )}
               </div>
@@ -449,19 +451,19 @@ function ZPLBroadcastPlayerStageComponent({
 
             {holdingTeam ? (
               <div
-                className={`p-3.5 sm:p-4 ${
+                className={`p-3.5 sm:p-4 flex-1 ${
                   isProjectorMode
-                    ? 'py-2 gap-3.5 flex-1 min-h-0 flex-row items-center'
-                    : 'gap-3 sm:gap-4 flex-col sm:flex-row sm:items-center'
+                    ? 'py-2.5 gap-3.5 min-h-0 flex-col md:flex-row md:items-center justify-center'
+                    : 'gap-3 md:gap-4 flex-col md:flex-row md:items-center'
                 } flex`}
               >
-                {/* Team Identity Row on Mobile; Standalone Logo on sm+ / Projector */}
-                <div className="flex items-center gap-3 sm:block shrink-0">
+                {/* Team Identity Row below md; Standalone Logo on md+ */}
+                <div className="flex items-center gap-3 md:block shrink-0">
                   <div
                     className={`${
                       isProjectorMode
-                        ? 'w-16 h-16 sm:w-20 sm:h-20'
-                        : 'w-14 h-14 sm:w-22 sm:h-22 md:w-24 md:h-24'
+                        ? 'w-14 h-14 md:w-20 md:h-20'
+                        : 'w-14 h-14 md:w-22 md:h-22'
                     } rounded-xl sm:rounded-2xl p-[2px] bg-gradient-to-br from-[#f5d77f] via-[#c59f33] to-[#8c6e18] shadow-md shrink-0`}
                   >
                     <div className="w-full h-full rounded-[10px] sm:rounded-[14px] bg-[#060c16] overflow-hidden flex items-center justify-center">
@@ -484,62 +486,56 @@ function ZPLBroadcastPlayerStageComponent({
                     </div>
                   </div>
 
-                  {/* Mobile-only team title beside logo so metrics below get full 100% width */}
-                  {!isProjectorMode && (
-                    <div className="sm:hidden min-w-0 text-left">
-                      <h3 className="text-lg font-black text-white uppercase tracking-tight leading-tight break-words">
-                        {holdingTeam.name}
-                      </h3>
-                      <p className="text-xs text-[#a1b3cb] font-semibold">
-                        Official ZPL Franchise
-                      </p>
-                    </div>
-                  )}
+                  {/* Compact team title beside logo on mobile/tablet so metrics below get full 100% width */}
+                  <div className="md:hidden min-w-0 text-left">
+                    <h3 className="text-base sm:text-lg font-black text-white uppercase tracking-tight leading-tight break-words">
+                      {holdingTeam.name}
+                    </h3>
+                    <p className="text-xs text-[#a1b3cb] font-semibold">
+                      Official ZPL Franchise
+                    </p>
+                  </div>
                 </div>
 
-                {/* Team Name (sm+/Projector) & Full-Width Stats Strip */}
+                {/* Team Name (md+) & Full-Width Stats Strip */}
                 <div className="w-full flex-1 min-w-0 flex flex-col justify-center space-y-2 text-left">
-                  <h3
-                    className={`${
-                      isProjectorMode ? 'block text-base sm:text-xl md:text-2xl' : 'hidden sm:block text-xl md:text-2xl'
-                    } font-black text-white uppercase tracking-tight leading-tight break-words`}
-                  >
+                  <h3 className="hidden md:block text-xl md:text-2xl font-black text-white uppercase tracking-tight leading-tight break-words">
                     {holdingTeam.name}
                   </h3>
 
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 items-stretch">
-                    <div className="rounded-xl bg-[#060d17] border border-[#162b4a] p-2.5 text-center">
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-[#a1b3cb] block mb-0.5 whitespace-nowrap">
+                    <div className="rounded-xl bg-[#060d17] border border-[#162b4a] p-2.5 flex flex-col items-center justify-center text-center">
+                      <span className="text-[10px] font-bold uppercase tracking-wide text-[#a1b3cb] block mb-0.5 whitespace-nowrap">
                         Purse Left
                       </span>
-                      <span className="text-base sm:text-base md:text-lg font-black text-emerald-400 block tabular-nums whitespace-nowrap">
+                      <span className="text-sm sm:text-base md:text-lg font-black text-emerald-400 block leading-tight tabular-nums whitespace-nowrap">
                         ₹ {holdingTeam.remainingPurse?.toLocaleString() ?? 0}
                       </span>
                     </div>
 
-                    <div className="rounded-xl bg-[#060d17] border border-[#162b4a] p-2.5 text-center">
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-[#a1b3cb] block mb-0.5 whitespace-nowrap">
+                    <div className="rounded-xl bg-[#060d17] border border-[#162b4a] p-2.5 flex flex-col items-center justify-center text-center">
+                      <span className="text-[10px] font-bold uppercase tracking-wide text-[#a1b3cb] block mb-0.5 whitespace-nowrap">
                         Squad
                       </span>
-                      <span className="text-base sm:text-base md:text-lg font-black text-white block tabular-nums whitespace-nowrap">
+                      <span className="text-sm sm:text-base md:text-lg font-black text-white block leading-tight tabular-nums whitespace-nowrap">
                         {holdingTeam.purchasedPlayerCount ?? 0} / 15
                       </span>
                     </div>
 
-                    <div className="rounded-xl bg-[#060d17] border border-[#162b4a] p-2.5 text-center">
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-[#a1b3cb] block mb-0.5 whitespace-nowrap">
+                    <div className="rounded-xl bg-[#060d17] border border-[#162b4a] p-2.5 flex flex-col items-center justify-center text-center">
+                      <span className="text-[10px] font-bold uppercase tracking-wide text-[#a1b3cb] block mb-0.5 whitespace-nowrap">
                         Spent
                       </span>
-                      <span className="text-base sm:text-base md:text-lg font-black text-[#f5d77f] block tabular-nums whitespace-nowrap">
+                      <span className="text-sm sm:text-base md:text-lg font-black text-[#f5d77f] block leading-tight tabular-nums whitespace-nowrap">
                         ₹ {(holdingTeam.totalSpent ?? 0).toLocaleString()}
                       </span>
                     </div>
 
-                    <div className="rounded-xl bg-[#f5d77f]/15 border border-[#f5d77f]/70 p-2.5 text-center flex flex-col justify-center">
-                      <span className="text-[10px] font-black uppercase tracking-wider text-[#f5d77f] block mb-0.5 whitespace-nowrap">
+                    <div className="rounded-xl bg-[#f5d77f]/15 border border-[#f5d77f]/70 p-2.5 flex flex-col items-center justify-center text-center">
+                      <span className="text-[10px] font-black uppercase tracking-wide text-[#f5d77f] block mb-0.5 whitespace-nowrap">
                         {isSold ? 'Final Bid' : 'Active Bid'}
                       </span>
-                      <span className="text-base sm:text-base md:text-lg font-black text-white block tabular-nums whitespace-nowrap">
+                      <span className="text-sm sm:text-base md:text-lg font-black text-white block leading-tight tabular-nums whitespace-nowrap">
                         <span className="text-[#f5d77f] mr-0.5">₹</span>
                         {currentBid}{' '}
                         <span className="text-[10px] text-[#f5d77f] font-black uppercase">PTS</span>
@@ -550,16 +546,17 @@ function ZPLBroadcastPlayerStageComponent({
               </div>
             ) : (
               <div
-                className={`p-4 text-center flex flex-col items-center justify-center space-y-1 ${
-                  isProjectorMode ? 'min-h-[72px]' : 'min-h-[96px]'
+                className={`flex-1 px-4 py-5 sm:py-6 text-center flex flex-col items-center justify-center gap-1.5 ${
+                  isProjectorMode ? 'min-h-[84px]' : 'min-h-[104px]'
                 }`}
               >
-                <p className="text-xs sm:text-sm font-black text-white uppercase tracking-wider">
-                  Bidding Open
+                <p className="text-sm sm:text-base md:text-lg font-black text-white tracking-wide leading-snug text-balance">
+                  No Bids Came for{' '}
+                  <span className="text-[#f5d77f] uppercase">{playerName}</span>
                 </p>
-                <p className="text-xs text-[#a1b3cb]">
-                  Awaiting opening bid at base price of{' '}
-                  <span className="text-[#f5d77f] font-bold tabular-nums">₹ {basePoints} PTS</span>.
+                <p className="text-xs sm:text-sm text-[#a1b3cb] font-medium">
+                  Base Price:{' '}
+                  <span className="text-[#fff4c2] font-bold tabular-nums">₹ {basePoints} PTS</span>
                 </p>
               </div>
             )}
